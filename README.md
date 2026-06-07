@@ -1,0 +1,2 @@
+# PluginBox
+Chrome PluginBox
