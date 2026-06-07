@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>链接 提取/预览/下载</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #111318;
+      --panel: rgba(255,255,255,0.06);
+      --line: rgba(255,255,255,0.12);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --green: #22c55e;
+      --blue: #38bdf8;
+      --amber: #f59e0b;
+      --red: #f87171;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      padding: 28px 18px 54px;
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(34,197,94,0.14), transparent 32rem),
+        radial-gradient(circle at top right, rgba(56,189,248,0.12), transparent 30rem),
+        var(--bg);
+    }
+    main { max-width: 1120px; margin: 0 auto; }
+    h1 { font-size: 2rem; letter-spacing: 0; margin-bottom: 8px; }
+    .sub { color: var(--muted); margin-bottom: 16px; }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+    }
+    .tip { padding: 14px 16px; color: #cbd5e1; line-height: 1.65; margin-bottom: 16px; }
+    .input { padding: 18px; margin-bottom: 18px; }
+    .row { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+    label { color: var(--blue); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .count { color: var(--muted); font-size: 13px; }
+    textarea {
+      width: 100%;
+      min-height: 300px;
+      max-height: 58vh;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.36);
+      color: #d1d5db;
+      padding: 14px;
+      font: 13px/1.58 "SF Mono", Consolas, monospace;
+    }
+    textarea:focus { outline: none; border-color: rgba(56,189,248,.55); box-shadow: 0 0 0 3px rgba(56,189,248,.1); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button {
+      min-height: 40px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 18px;
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      background: #334155;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .primary { background: linear-gradient(135deg, var(--green), #16a34a); }
+    .download { background: linear-gradient(135deg, var(--blue), #2563eb); }
+    .export { background: linear-gradient(135deg, var(--amber), #d97706); color: #111827; }
+    .status {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .status.show { display: block; }
+    .status.success { color: #86efac; background: rgba(34,197,94,.12); }
+    .status.info { color: #bae6fd; background: rgba(56,189,248,.12); }
+    .status.error { color: #fca5a5; background: rgba(248,113,113,.12); }
+    .results { display: none; }
+    .results.show { display: block; }
+    .head {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      margin-bottom: 14px;
+      background: linear-gradient(180deg, rgba(17,19,24,.96), rgba(17,19,24,.84));
+      backdrop-filter: blur(10px);
+    }
+    .summary h2 { font-size: 1.05rem; }
+    .summary span { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
+    .pager { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .page-info { min-width: 84px; color: #cbd5e1; text-align: center; }
+    .page-jump { display: inline-flex; align-items: center; gap: 6px; }
+    .page-jump input {
+      width: 76px;
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.28);
+      color: var(--text);
+      padding: 0 10px;
+      font: inherit;
+    }
+    .page-jump input:focus { outline: none; border-color: rgba(56,189,248,.55); }
+    .list { display: flex; flex-direction: column; gap: 18px; }
+    .item {
+      min-height: calc(100vh - 34px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(0,0,0,.24);
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.055);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .idx { color: #86efac; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .meta a { color: #bae6fd; word-break: break-all; line-height: 1.45; font-size: 13px; text-decoration: none; }
+    .stage {
+      min-height: calc(100vh - 110px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    .stage img { max-width: 100%; max-height: calc(100vh - 136px); object-fit: contain; background: #0b0d10; border-radius: 4px; }
+    .failed { color: var(--red); font-weight: 800; }
+    @media (max-width: 700px) {
+      body { padding: 18px 12px 40px; }
+      h1 { font-size: 1.55rem; }
+      .row, .head { flex-direction: column; align-items: stretch; }
+      button { flex: 1 1 calc(50% - 5px); }
+      .meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>链接 提取/预览/下载</h1>
+    <section class="panel tip">
+      <div>- 粘贴 JSON ，可提取链接/预览/下载图片</div>
+      <div>- 粘贴 多行链接，可预览/下载图片</div>
+    </section>
+    <section class="panel input">
+      <div class="row">
+        <label for="inputText">输入文本</label>
+        <span class="count" id="inputCounter">0 行</span>
+      </div>
+      <textarea id="inputText" placeholder="粘贴 JSON 或多行图片链接..."></textarea>
+      <div class="actions">
+        <button class="primary" id="okBtn" type="button">OK</button>
+        <button class="download" id="downloadBtn" type="button" disabled>下载</button>
+        <button class="export" id="exportBtn" type="button" disabled>导出 Excel</button>
+        <button id="clearBtn" type="button">清空</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+    <section class="results" id="results">
+      <div class="head">
+        <div class="summary">
+          <h2>大图预览</h2>
+          <span id="summary">0 条链接</span>
+        </div>
+        <div class="pager">
+          <button id="prevBtn" type="button">上一页</button>
+          <span class="page-info" id="pageInfo">1 / 1</span>
+          <button id="nextBtn" type="button">下一页</button>
+          <span class="page-jump">
+            <input id="jumpInput" type="number" min="1" value="1" aria-label="页码">
+            <button id="jumpBtn" type="button">跳转</button>
+          </span>
+        </div>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+  </main>
+  <script src="link_tool.js"></script>
+</body>
+</html>

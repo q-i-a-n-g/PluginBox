@@ -1,0 +1,21 @@
+这个链接：
+https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/stage/#/admin/evaluation/holepage/65852/469091/1
+该页面已经保存为：整页批改评测——详情页_files 文件夹、整页批改评测——详情页.htm
+评测内容：
+作答结果
+    - 作答： 一致 不一致 半对 忽略 未作答
+    - 算法可解：是 否
+手写识别
+    - 识别：一致 不一致 忽略
+答案框
+    - 答案框：对 错 忽略
+题目框
+    - 题目框：对 错 忽略
+    -题目作答情况、未作答且遗漏空数、严格批改等不评测
+只评这4个tab的内容，其他的比如 自由批改、学生信息识别 等tab都不要评测，给出一个完整的插件，
+作答结果、手写识别、答案框、题目框可只选某一个或几个，可分别一键评测它们对应的内容
+- 超时弹窗提醒如图：答案框评测/chaoshi.png，前3次的弹窗，自动点“等待”
+- 可以发给别人用，不要额外安装依赖
+
+“已选中对”样例（补充）：
+<div class="ant-form-item" style="margin: 0px; display: inline-block;"><div class="ant-row ant-form-item-row"><div class="ant-col ant-form-item-label"><label for="answerBorderEvaluationResults_0_evaluation" class="ant-form-item-required" title=""><b>答案框-0-0</b></label></div><div class="ant-col ant-form-item-control"><div class="ant-form-item-control-input"><div class="ant-form-item-control-input-content"><div aria-required="true" class="ant-radio-group ant-radio-group-outline" id="answerBorderEvaluationResults_0_evaluation"><label class="ant-radio-wrapper ant-radio-wrapper-checked ant-radio-wrapper-in-form-item"><span class="ant-radio ant-radio-checked"><input type="radio" class="ant-radio-input" value="1" checked=""><span class="ant-radio-inner"></span></span><span>对</span></label><label class="ant-radio-wrapper ant-radio-wrapper-in-form-item"><span class="ant-radio"><input type="radio" class="ant-radio-input" value="2"><span class="ant-radio-inner"></span></span><span>错</span></label><label class="ant-radio-wrapper ant-radio-wrapper-in-form-item"><span class="ant-radio"><input type="radio" class="ant-radio-input" value="0"><span class="ant-radio-inner"></span></span><span>忽略</span></label></div></div></div></div></div></div>

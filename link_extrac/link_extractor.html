@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链接预览下载</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #111318;
+            --panel: rgba(255, 255, 255, 0.055);
+            --panel-strong: rgba(255, 255, 255, 0.085);
+            --line: rgba(255, 255, 255, 0.11);
+            --muted: #9ca3af;
+            --text: #e5e7eb;
+            --primary: #22c55e;
+            --primary-deep: #16a34a;
+            --blue: #38bdf8;
+            --amber: #f59e0b;
+            --error: #f87171;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(34, 197, 94, 0.14), transparent 32rem),
+                radial-gradient(circle at top right, rgba(56, 189, 248, 0.11), transparent 30rem),
+                var(--bg);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 28px 18px 56px;
+        }
+
+        .container {
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 18px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 0;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            backdrop-filter: blur(14px);
+        }
+
+        .tips-card {
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        .tips-card ul {
+            list-style: none;
+            display: grid;
+            gap: 4px;
+        }
+
+        .input-section {
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+
+        .input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--blue);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .counter {
+            color: var(--muted);
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 310px;
+            max-height: 58vh;
+            background: rgba(0, 0, 0, 0.36);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px;
+            color: #d1d5db;
+            font-family: "SF Mono", "Fira Code", Consolas, monospace;
+            font-size: 0.82rem;
+            line-height: 1.58;
+            resize: vertical;
+        }
+
+        textarea::placeholder {
+            color: #6b7280;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: rgba(56, 189, 248, 0.55);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .btn {
+            min-height: 40px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+            color: #fff;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--blue), #2563eb);
+            color: #fff;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, var(--amber), #d97706);
+            color: #111827;
+        }
+
+        .btn-clear,
+        .btn-page {
+            background: rgba(255, 255, 255, 0.08);
+            color: #d1d5db;
+            border: 1px solid var(--line);
+        }
+
+        .status-bar {
+            margin-top: 14px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.86rem;
+            display: none;
+            line-height: 1.45;
+        }
+
+        .status-bar.show {
+            display: block;
+        }
+
+        .status-bar.success {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.26);
+            color: #86efac;
+        }
+
+        .status-bar.error {
+            background: rgba(248, 113, 113, 0.12);
+            border: 1px solid rgba(248, 113, 113, 0.26);
+            color: #fca5a5;
+        }
+
+        .status-bar.info {
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.26);
+            color: #bae6fd;
+        }
+
+        .result-section {
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-head {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+            padding: 12px 0;
+            background: linear-gradient(180deg, rgba(17, 19, 24, 0.96), rgba(17, 19, 24, 0.84));
+            backdrop-filter: blur(10px);
+        }
+
+        .result-title {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .result-title h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .result-title span {
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        .pager {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .page-info {
+            color: #cbd5e1;
+            font-size: 0.86rem;
+            min-width: 88px;
+            text-align: center;
+        }
+
+        .page-jump {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .page-jump input {
+            width: 76px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: rgba(0, 0, 0, 0.28);
+            color: var(--text);
+            padding: 0 10px;
+            font: inherit;
+            font-size: 0.9rem;
+        }
+
+        .page-jump input:focus {
+            outline: none;
+            border-color: rgba(56, 189, 248, 0.55);
+        }
+
+        .image-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .image-item {
+            min-height: calc(100vh - 34px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            background: rgba(0, 0, 0, 0.24);
+            scroll-snap-align: start;
+        }
+
+        .image-meta {
+            display: grid;
+            grid-template-columns: 76px minmax(0, 1fr);
+            gap: 10px;
+            align-items: start;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.055);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .image-index {
+            color: #86efac;
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .image-link {
+            color: #bae6fd;
+            text-decoration: none;
+            word-break: break-all;
+            line-height: 1.45;
+            font-size: 0.83rem;
+        }
+
+        .image-link:hover {
+            text-decoration: underline;
+        }
+
+        .image-stage {
+            min-height: calc(100vh - 110px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+        }
+
+        .image-stage img {
+            display: block;
+            max-width: 100%;
+            max-height: calc(100vh - 136px);
+            object-fit: contain;
+            background: #0b0d10;
+            border-radius: 4px;
+        }
+
+        .image-stage .failed {
+            color: var(--error);
+            font-weight: 700;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 18px 12px 40px;
+            }
+
+            .header h1 {
+                font-size: 1.55rem;
+            }
+
+            .input-row,
+            .result-head {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .pager {
+                justify-content: flex-start;
+            }
+
+            .btn {
+                flex: 1 1 calc(50% - 5px);
+            }
+
+            .image-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header class="header">
+            <h1>链接 提取/预览/下载</h1>
+        </header>
+
+        <section class="panel tips-card">
+            <ul>
+                <li>- 粘贴 JSON ，可提取链接/预览/下载图片</li>
+                <li>- 粘贴 多行链接，可预览/下载图片</li>
+            </ul>
+        </section>
+
+        <section class="panel input-section">
+            <div class="input-row">
+                <label for="inputText">输入文本</label>
+                <span class="counter" id="inputCounter">0 行</span>
+            </div>
+            <textarea id="inputText" placeholder="粘贴 JSON 或多行图片链接...&#10;https://metis-online.fbcontent.cn/.../4nMWZXhTevpDNcqBUTi5eZ.jpg"></textarea>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="extractBtn" type="button">OK</button>
+                <button class="btn btn-download" id="downloadBtn" type="button" disabled>下载</button>
+                <button class="btn btn-export" id="exportBtn" type="button" disabled>导出 Excel</button>
+                <button class="btn btn-clear" id="clearBtn" type="button">清空</button>
+            </div>
+            <div class="status-bar" id="statusBar"></div>
+        </section>
+
+        <section class="result-section" id="resultSection">
+            <div class="result-head">
+                <div class="result-title">
+                    <h2>大图预览</h2>
+                    <span id="resultSummary">0 条链接</span>
+                </div>
+                <div class="pager">
+                    <button class="btn btn-page" id="prevBtn" type="button">上一页</button>
+                    <span class="page-info" id="pageInfo">1 / 1</span>
+                    <button class="btn btn-page" id="nextBtn" type="button">下一页</button>
+                    <span class="page-jump">
+                        <input id="jumpInput" type="number" min="1" value="1" aria-label="页码">
+                        <button class="btn btn-page" id="jumpBtn" type="button">跳转</button>
+                    </span>
+                </div>
+            </div>
+            <div class="image-list" id="imageList"></div>
+        </section>
+    </main>
+
+    <script>
+        const PAGE_SIZE = 20;
+        const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)(?:[?#].*)?$/i;
+
+        let extractedLinks = [];
+        let currentPage = 1;
+        const preloadCache = new Map();
+
+        const inputText = document.getElementById("inputText");
+        const inputCounter = document.getElementById("inputCounter");
+        const statusBar = document.getElementById("statusBar");
+        const resultSection = document.getElementById("resultSection");
+        const resultSummary = document.getElementById("resultSummary");
+        const imageList = document.getElementById("imageList");
+        const pageInfo = document.getElementById("pageInfo");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const jumpInput = document.getElementById("jumpInput");
+        const jumpBtn = document.getElementById("jumpBtn");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const exportBtn = document.getElementById("exportBtn");
+
+        document.getElementById("extractBtn").addEventListener("click", extractLinks);
+        document.getElementById("downloadBtn").addEventListener("click", downloadAll);
+        document.getElementById("exportBtn").addEventListener("click", exportExcel);
+        document.getElementById("clearBtn").addEventListener("click", clearAll);
+        prevBtn.addEventListener("click", () => goPage(currentPage - 1));
+        nextBtn.addEventListener("click", () => goPage(currentPage + 1));
+        jumpBtn.addEventListener("click", jumpToPage);
+        jumpInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                jumpToPage();
+            }
+        });
+
+        inputText.addEventListener("input", updateCounter);
+        inputText.addEventListener("paste", () => {
+            requestAnimationFrame(() => {
+                inputText.value = trimTrailingBlankLines(inputText.value);
+                updateCounter();
+            });
+        });
+
+        function trimTrailingBlankLines(text) {
+            return String(text || "").replace(/(?:\r?\n\s*)+$/g, "");
+        }
+
+        function updateCounter() {
+            const text = trimTrailingBlankLines(inputText.value);
+            const lines = text ? text.split(/\r?\n/).length : 0;
+            inputCounter.textContent = `${lines} 行`;
+        }
+
+        function showStatus(message, type) {
+            statusBar.textContent = message;
+            statusBar.className = `status-bar show ${type}`;
+        }
+
+        function normalizeRawText(text) {
+            return trimTrailingBlankLines(text)
+                .replace(/\\\//g, "/")
+                .replace(/&amp;/g, "&");
+        }
+
+        function parseImageLinks(text) {
+            const raw = normalizeRawText(text);
+            const matches = raw.match(/https?:\/\/[^\s"'<>，。；、)\]}]+/g) || [];
+            const links = [];
+            const seen = new Set();
+
+            for (const match of matches) {
+                const link = match.replace(/[),.;，。；]+$/g, "");
+                if (!IMAGE_EXT_RE.test(link)) {
+                    continue;
+                }
+                if (seen.has(link)) {
+                    continue;
+                }
+                seen.add(link);
+                links.push(link);
+            }
+
+            return links;
+        }
+
+        function extractLinks() {
+            inputText.value = trimTrailingBlankLines(inputText.value);
+            updateCounter();
+
+            if (!inputText.value.trim()) {
+                resetResults();
+                showStatus("请先粘贴文本。", "error");
+                return;
+            }
+
+            extractedLinks = parseImageLinks(inputText.value);
+            currentPage = 1;
+            preloadCache.clear();
+
+            if (extractedLinks.length === 0) {
+                resetResults();
+                showStatus("未找到图片链接。", "error");
+                return;
+            }
+
+            resultSection.classList.add("show");
+            downloadBtn.disabled = false;
+            exportBtn.disabled = false;
+            renderPage();
+            showStatus(`已提取 ${extractedLinks.length} 条图片链接。`, "success");
+        }
+
+        function resetResults() {
+            imageList.innerHTML = "";
+            resultSection.classList.remove("show");
+            downloadBtn.disabled = true;
+            exportBtn.disabled = true;
+            extractedLinks = [];
+            currentPage = 1;
+            preloadCache.clear();
+        }
+
+        function getTotalPages() {
+            return Math.max(1, Math.ceil(extractedLinks.length / PAGE_SIZE));
+        }
+
+        function goPage(page) {
+            const totalPages = getTotalPages();
+            currentPage = Math.min(Math.max(1, page), totalPages);
+            renderPage();
+            resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function renderPage() {
+            const totalPages = getTotalPages();
+            const start = (currentPage - 1) * PAGE_SIZE;
+            const pageLinks = extractedLinks.slice(start, start + PAGE_SIZE);
+
+            resultSummary.textContent = `${extractedLinks.length} 条链接，当前 ${start + 1}-${start + pageLinks.length}`;
+            pageInfo.textContent = `${currentPage} / ${totalPages}`;
+            jumpInput.max = String(totalPages);
+            jumpInput.value = String(currentPage);
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+
+            imageList.innerHTML = "";
+            for (let i = 0; i < pageLinks.length; i += 1) {
+                imageList.appendChild(createImageItem(pageLinks[i], start + i));
+            }
+            preloadPage(currentPage + 1);
+        }
+
+        function jumpToPage() {
+            const target = Number.parseInt(jumpInput.value, 10);
+            if (!Number.isFinite(target)) {
+                showStatus("请输入页码。", "error");
+                return;
+            }
+            goPage(target);
+        }
+
+        function createImageItem(link, index) {
+            const item = document.createElement("article");
+            item.className = "image-item";
+            item.id = `img-${index + 1}`;
+
+            const meta = document.createElement("div");
+            meta.className = "image-meta";
+
+            const number = document.createElement("div");
+            number.className = "image-index";
+            number.textContent = `#${index + 1}`;
+
+            const a = document.createElement("a");
+            a.className = "image-link";
+            a.href = link;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.textContent = link;
+
+            const stage = document.createElement("div");
+            stage.className = "image-stage";
+
+            const img = document.createElement("img");
+            img.src = link;
+            img.alt = `第 ${index + 1} 张`;
+            img.loading = index % PAGE_SIZE < 3 ? "eager" : "lazy";
+            img.decoding = "async";
+            img.addEventListener("error", () => {
+                stage.innerHTML = '<span class="failed">图片加载失败</span>';
+            });
+
+            meta.append(number, a);
+            stage.appendChild(img);
+            item.append(meta, stage);
+            return item;
+        }
+
+        function preloadPage(page) {
+            const totalPages = getTotalPages();
+            if (page < 1 || page > totalPages) {
+                return;
+            }
+            const start = (page - 1) * PAGE_SIZE;
+            const links = extractedLinks.slice(start, start + PAGE_SIZE);
+            for (const link of links) {
+                if (preloadCache.has(link)) {
+                    continue;
+                }
+                const img = new Image();
+                img.decoding = "async";
+                img.src = link;
+                preloadCache.set(link, img);
+            }
+        }
+
+        function extractFileName(url) {
+            try {
+                const pathname = new URL(url).pathname;
+                const raw = pathname.split("/").filter(Boolean).pop() || "";
+                return decodeURIComponent(raw) || "download";
+            } catch (_error) {
+                return "download";
+            }
+        }
+
+        async function downloadAll() {
+            if (extractedLinks.length === 0) {
+                showStatus("没有可下载的图片链接。", "error");
+                return;
+            }
+
+            downloadBtn.disabled = true;
+            exportBtn.disabled = true;
+            showStatus(`开始下载 ${extractedLinks.length} 张图片...`, "info");
+
+            try {
+                const result = await downloadWithBlobQueue(extractedLinks);
+                if (result.failed.length > 0) {
+                    showStatus(
+                        `已下载 ${result.saved} 张，失败 ${result.failed.length} 张。失败多为跨域限制，可用“插件盒子”下载。`,
+                        result.saved > 0 ? "info" : "error"
+                    );
+                } else {
+                    showStatus(`已按顺序下载 ${result.saved} 张图片。`, "success");
+                }
+            } finally {
+                downloadBtn.disabled = false;
+                exportBtn.disabled = false;
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function downloadWithBlobQueue(links) {
+            const concurrency = Math.min(8, links.length);
+            const results = new Array(links.length);
+            const waiters = new Array(links.length);
+            const failed = [];
+            let nextFetchIndex = 0;
+            let saved = 0;
+
+            function setResult(index, value) {
+                results[index] = value;
+                if (waiters[index]) {
+                    waiters[index](value);
+                    waiters[index] = null;
+                }
+            }
+
+            function waitForResult(index) {
+                if (results[index]) {
+                    return Promise.resolve(results[index]);
+                }
+                return new Promise((resolve) => {
+                    waiters[index] = resolve;
+                });
+            }
+
+            async function worker() {
+                while (nextFetchIndex < links.length) {
+                    const index = nextFetchIndex;
+                    nextFetchIndex += 1;
+                    try {
+                        const blob = await fetchImageBlob(links[index]);
+                        setResult(index, { ok: true, blob });
+                    } catch (error) {
+                        setResult(index, {
+                            ok: false,
+                            error: error?.message || "下载失败"
+                        });
+                    }
+                }
+            }
+
+            const workers = Array.from({ length: concurrency }, () => worker());
+            for (let index = 0; index < links.length; index += 1) {
+                const result = await waitForResult(index);
+                const link = links[index];
+                const order = index + 1;
+                if (result.ok) {
+                    saveBlob(result.blob, extractFileName(link));
+                    saved += 1;
+                    showStatus(`下载中 ${order} / ${links.length}`, "info");
+                    await sleep(order % 10 === 0 ? 900 : 180);
+                } else {
+                    failed.push({
+                        index: order,
+                        link,
+                        reason: result.error
+                    });
+                    showStatus(`跳过失败 ${order} / ${links.length}`, "info");
+                }
+                results[index] = null;
+            }
+
+            await Promise.all(workers);
+            return { saved, failed };
+        }
+
+        async function fetchImageBlob(url) {
+            const response = await fetch(url, {
+                mode: "cors",
+                credentials: "omit",
+                cache: "force-cache"
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.blob();
+        }
+
+        function saveBlob(blob, filename) {
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = objectUrl;
+            a.download = filename;
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+        }
+
+        function exportExcel() {
+            if (extractedLinks.length === 0) {
+                showStatus("没有可导出的链接。", "error");
+                return;
+            }
+
+            if (!window.XLSX) {
+                showStatus("Excel 库未加载，请检查网络后重试。", "error");
+                return;
+            }
+
+            const data = [["序号", "链接地址", "文件名"]];
+            extractedLinks.forEach((link, index) => {
+                data.push([index + 1, link, extractFileName(link)]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            ws["!cols"] = [{ wch: 8 }, { wch: 110 }, { wch: 34 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "图片链接");
+
+            const now = new Date();
+            const timestamp = [
+                now.getFullYear(),
+                String(now.getMonth() + 1).padStart(2, "0"),
+                String(now.getDate()).padStart(2, "0")
+            ].join("") + "_" + [
+                String(now.getHours()).padStart(2, "0"),
+                String(now.getMinutes()).padStart(2, "0"),
+                String(now.getSeconds()).padStart(2, "0")
+            ].join("");
+
+            XLSX.writeFile(wb, `图片链接_${timestamp}.xlsx`);
+            showStatus(`已导出 ${extractedLinks.length} 条链接。`, "success");
+        }
+
+        function clearAll() {
+            inputText.value = "";
+            statusBar.className = "status-bar";
+            updateCounter();
+            resetResults();
+        }
+
+        updateCounter();
+    </script>
+</body>
+</html>

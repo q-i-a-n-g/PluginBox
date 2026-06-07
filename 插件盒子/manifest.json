@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "插件盒子",
+  "version": "1.0.0",
+  "description": "链接、图片下载、评测助手统一入口。",
+  "permissions": [
+    "downloads",
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "打开插件盒子"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "link_tool.html",
+        "link_tool.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

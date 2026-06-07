@@ -1,0 +1,57 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - link [ref=e7] [cursor=pointer]:
+      - /url: "#/"
+      - img [ref=e8]:
+        - img [ref=e9]
+    - generic [ref=e11]: 线上
+    - menu
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e16]:
+          - generic:
+            - heading [level=2]
+          - generic [ref=e17]: 2026-05-06 11:26
+          - button "导出批改详情" [ref=e19] [cursor=pointer]:
+            - generic [ref=e20]: 导出批改详情
+          - generic [ref=e22]:
+            - generic [ref=e24]:
+              - generic "显示题目框" [ref=e26]: "显示题目框 :"
+              - switch [checked] [ref=e30] [cursor=pointer]
+            - generic [ref=e33]:
+              - generic "显示答案框" [ref=e35]: "显示答案框 :"
+              - switch [checked] [ref=e39] [cursor=pointer]
+            - generic [ref=e42]:
+              - generic "显示识别结果" [ref=e44]: "显示识别结果 :"
+              - switch [ref=e48] [cursor=pointer]
+            - link "统计详情" [ref=e50] [cursor=pointer]:
+              - /url: https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/stage/#/admin/evaluation/holepage-stat/65852/469079
+        - generic [ref=e51]:
+          - heading "题目区 下载梯形校正后图" [level=3] [ref=e53]:
+            - text: 题目区
+            - paragraph [ref=e54]:
+              - button "下载梯形校正后图" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]: 下载梯形校正后图
+          - generic [ref=e58]:
+            - tablist [ref=e59]:
+              - generic [ref=e61]:
+                - tab "作答结果" [selected] [ref=e63] [cursor=pointer]:
+                  - heading "作答结果" [level=4] [ref=e64]
+                - tab "手写识别" [ref=e66] [cursor=pointer]:
+                  - heading "手写识别" [level=4] [ref=e67]
+                - tab "答案框" [ref=e69] [cursor=pointer]:
+                  - heading "答案框" [level=4] [ref=e70]
+                - tab "自由批改" [ref=e72] [cursor=pointer]:
+                  - heading "自由批改" [level=4] [ref=e73]
+                - tab "题目框" [ref=e75] [cursor=pointer]:
+                  - heading "题目框" [level=4] [ref=e76]
+                - tab "学生信息识别" [ref=e78] [cursor=pointer]:
+                  - heading "学生信息识别" [level=4] [ref=e79]
+                - tab "分数识别" [ref=e81] [cursor=pointer]:
+                  - heading "分数识别" [level=4] [ref=e82]
+            - generic:
+              - generic:
+                - tabpanel "作答结果"
+      - button "一键送标" [ref=e83] [cursor=pointer]:
+        - generic [ref=e84]: 一键送标

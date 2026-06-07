@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "图片顺序下载",
+  "version": "1.1.0",
+  "description": "在作业批改页面自动显示顺序下载按钮，按图片真实顺序串行下载。",
+  "permissions": [
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://mapi.yuanfudao.com/*",
+    "https://*.fbcontent.cn/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mapi.yuanfudao.com/evaluation/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

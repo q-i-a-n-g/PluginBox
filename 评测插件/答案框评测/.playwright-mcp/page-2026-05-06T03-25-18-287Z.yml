@@ -1,0 +1,224 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic:
+      - heading [level=1] [ref=e4]:
+        - img [ref=e5]
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link "首页" [ref=e8] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e9]:
+          - text: "|"
+          - link "猿辅导素养课" [ref=e10] [cursor=pointer]:
+            - /url: https://www.yuanfudaosuyang.com/
+            - img [ref=e11]
+            - text: 猿辅导素养课
+        - listitem [ref=e12]:
+          - text: "|"
+          - link "斑马AI学" [ref=e13] [cursor=pointer]:
+            - /url: https://banmaaike.com/
+            - img [ref=e14]
+            - text: 斑马AI学
+        - listitem [ref=e15]:
+          - text: "|"
+          - link "小猿口算" [ref=e16] [cursor=pointer]:
+            - /url: https://xiaoyuankousuan.com/
+            - img [ref=e17]
+            - text: 小猿口算
+        - listitem [ref=e18]:
+          - text: "|"
+          - link "小猿搜题" [ref=e19] [cursor=pointer]:
+            - /url: https://www.yuansouti.com
+            - img [ref=e20]
+            - text: 小猿搜题
+        - listitem [ref=e21]:
+          - text: "|"
+          - link "猿编程" [ref=e22] [cursor=pointer]:
+            - /url: https://www.ybccode.com/
+            - img [ref=e23]
+            - text: 猿编程
+        - listitem [ref=e24]:
+          - text: "|"
+          - link "海豚AI学" [ref=e25] [cursor=pointer]:
+            - /url: https://www.haitunzixi.com/
+            - img [ref=e26]
+            - text: 海豚AI学
+    - text:  
+    - generic [ref=e27]: 登录注册
+  - generic [ref=e28]:
+    - img [ref=e32]
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - heading "猿辅导在线教育" [level=2] [ref=e37]
+        - paragraph [ref=e38]
+        - paragraph [ref=e39]: 公司旗下拥有猿辅导素养课、斑马AI学、小猿口算、猿编程、海豚AI学等多款在线教育产品及数字内容产品，为用户提供互动网课、智能练习、能力培养等多元化的智能教育服务，帮助学生系统性、高效率地培养知识及能力素养。
+        - paragraph [ref=e40]: 猿辅导在线教育正在为更多中国学生提供智能、便捷、有趣的在线学习体验。以科技推动大规模因材施教，致力于让中国的每一位学生，都能享有高品质、个性化的教育。
+      - generic [ref=e41]:
+        - link [ref=e42] [cursor=pointer]:
+          - /url: https://banmaaike.com/
+          - img [ref=e43]
+        - link [ref=e44] [cursor=pointer]:
+          - /url: https://www.yuanfudaosuyang.com/
+          - img [ref=e45]
+        - link [ref=e46] [cursor=pointer]:
+          - /url: https://xiaoyuankousuan.com/
+          - img [ref=e47]
+        - link [ref=e48] [cursor=pointer]:
+          - /url: https://www.ybccode.com/
+          - img [ref=e49]
+        - link [ref=e50] [cursor=pointer]:
+          - /url: https://www.yuansouti.com/
+          - img [ref=e51]
+        - link [ref=e52] [cursor=pointer]:
+          - /url: https://www.haitunzixi.com/
+          - img [ref=e53]
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - heading "在线教育历史性携手冬奥" [level=2] [ref=e57]
+        - paragraph [ref=e58]: 助力百年奥运开启“在线时代”
+      - img [ref=e59]
+    - generic [ref=e61]:
+      - heading "与《最强大脑》深度合作" [level=2] [ref=e62]
+      - paragraph [ref=e63]
+      - list [ref=e64]:
+        - listitem [ref=e65]:
+          - img [ref=e66]
+          - heading "江苏卫视《最强大脑》" [level=4] [ref=e67]
+          - paragraph [ref=e68]: 独家在线教育合作伙伴
+    - generic [ref=e70]:
+      - heading "科技驱动，助力教育变革" [level=3] [ref=e71]
+      - list [ref=e72]:
+        - listitem [ref=e73]: 微软 MSMarco 机器阅读理解排行榜，荣获全球第一。
+        - listitem [ref=e74]: 斯坦福问答数据集水平测试，荣获全球第一。成为 AI 实力获“互联网女皇”赞许的在线教育公司。
+        - listitem [ref=e75]: 猿辅导 AI 研究院，向业界开源共享超过五项自主研发技术。
+    - generic [ref=e77]:
+      - heading "媒体关注与报道" [level=3] [ref=e78]
+      - generic [ref=e82]:
+        - generic [ref=e84]:
+          - img [ref=e85]
+          - heading "“最强大脑”王峰猿辅导上分享独家脑力秘籍 50 万学生“抢爆”一节课" [level=6] [ref=e86]
+          - paragraph [ref=e87]: 2 天倒背如流四级词汇、5 分钟记忆 80 个历史事件，是天生脑力过人还是后天训练得法？3 月 15 日，《最强大脑》战队队长、世界记忆总冠军王峰在猿辅导APP 上分享了他的脑力秘籍，吸引了全国逾 50 万青少年学生报名听讲。
+          - link "查看详情" [ref=e88] [cursor=pointer]:
+            - /url: http://www.chinanews.com/yl/2019/03-20/8785432.shtml
+        - generic [ref=e90]:
+          - img [ref=e91]
+          - heading "「猿辅导」完成腾讯领投 3 亿美元新一轮融资，投后估值超过 30 亿美元" [level=6] [ref=e92]
+          - paragraph [ref=e93]: 日前，知名在线教育机构猿辅导公司宣布完成了新一轮 3 亿美元融资，本轮融资由腾讯公司领投，华平投资、经纬中国等跟投。当前，“人工智能 + 教育”正在成为新的热点，诸多互联网教育领域的创业企业，都迅速布局这一领域，以技术提高教育水准和效率。
+          - link "查看详情" [ref=e94] [cursor=pointer]:
+            - /url: https://36kr.com/p/5168892
+        - generic [ref=e96]:
+          - img [ref=e97]
+          - heading "三科学家玩直播科普 吸引逾十万中小学生" [level=6] [ref=e98]
+          - paragraph [ref=e99]: 这 3 位科学家分别是中科院物理所魏红祥、梁文杰、程金光，8 月底他们分别以“探索神秘的物理世界”“揭秘纳米材料的奇妙性质”“压强的应用和探索” 3 个主题，在直播课程平台猿辅导上，通过实验视频展示、模型分析等方式为学生们奉上一场科普大餐。
+          - link "查看详情" [ref=e100] [cursor=pointer]:
+            - /url: http://news.cyol.com/yuanchuang/2018-09/03/content_17546393.htm
+        - generic [ref=e102]:
+          - img [ref=e103]
+          - heading "猿辅导独家课程获“学习强国”重点推荐" [level=6] [ref=e104]
+          - paragraph [ref=e105]: 近日，猿辅导独家课程《古典音乐启蒙课》入选“学习强国”，并获重点推荐，“学习强国”正式推出了“中小学暑期课堂”，这套音乐启蒙课由猿辅导和中央音乐学院副教授、著名儿童音乐教育学家陈小龙老师共同打造。
+          - link "查看详情" [ref=e106] [cursor=pointer]:
+            - /url: http://it.people.com.cn/n1/2019/0903/c1009-31334121.html
+        - generic [ref=e108]:
+          - img [ref=e109]
+          - heading "教与学 更智能：猿辅导以科技创新推动教育发展" [level=6] [ref=e110]
+          - paragraph [ref=e111]: “猿辅导以科技创新推动教育发展，人工智能与教育深度融合，让教与学更智能，提升教学效率与效果，促进教育公平。”
+          - link "查看详情" [ref=e112] [cursor=pointer]:
+            - /url: https://wap.peopleapp.com/article/4661127/4544375
+        - generic [ref=e114]:
+          - img [ref=e115]
+          - heading "教育部公布首批教育 APP 备案名单：猿辅导等 152 款 APP 通过备案" [level=6] [ref=e116]
+          - paragraph [ref=e117]: 教育部公布了第一批 152 款教育移动互联网应用程序备案名单，猿辅导及旗下小猿搜题、小猿口算等 6 款应用通过了首批备案审核。这份备案名单的出炉，将为广大用户选择教育类 APP 提供权威参考。
+          - link "查看详情" [ref=e118] [cursor=pointer]:
+            - /url: https://www.chinanews.com/business/2019/12-17/9035928.shtml
+        - generic [ref=e120]:
+          - img [ref=e121]
+          - heading "猿辅导成《最强大脑》独家在线辅导合作伙伴 同步推“小学数学能力训练营”课程" [level=6] [ref=e122]
+          - paragraph [ref=e123]: 1 月 13 日，《最强大脑》联合猿辅导在京举行播出前的专场看片会，正式官宣猿辅导成为本季《最强大脑》独家在线辅导合作伙伴，与节目同步推出“小学数学能力训练营”定制课程，并且双方将在节目全程展开战略合作。
+          - link "查看详情" [ref=e124] [cursor=pointer]:
+            - /url: http://gongyi.people.com.cn/n1/2019/0114/c151132-30527465.html
+        - generic [ref=e126]:
+          - img [ref=e127]
+          - heading "猿辅导被授予“牛津科技创新金牌合作伙伴” ，获牛津大学出版社再度点赞" [level=6] [ref=e128]
+          - paragraph [ref=e129]: 4 月 18 日，牛津大学出版社在北京举办了“光融盛典 2019 牛津大会——融合发展与教育个性化峰会”。会上，猿辅导被授予“牛津科技创新金牌合作伙伴”奖。这也是牛津大学出版社连续两年“点赞”猿辅导。
+          - link "查看详情" [ref=e130] [cursor=pointer]:
+            - /url: http://www.sohu.com/a/309711856_100114
+        - generic [ref=e132]:
+          - img [ref=e133]
+          - heading "“最强大脑”王峰猿辅导上分享独家脑力秘籍 50 万学生“抢爆”一节课" [level=6] [ref=e134]
+          - paragraph [ref=e135]: 2 天倒背如流四级词汇、5 分钟记忆 80 个历史事件，是天生脑力过人还是后天训练得法？3 月 15 日，《最强大脑》战队队长、世界记忆总冠军王峰在猿辅导APP 上分享了他的脑力秘籍，吸引了全国逾 50 万青少年学生报名听讲。
+          - link "查看详情" [ref=e136] [cursor=pointer]:
+            - /url: http://www.chinanews.com/yl/2019/03-20/8785432.shtml
+        - generic [ref=e138]:
+          - img [ref=e139]
+          - heading "「猿辅导」完成腾讯领投 3 亿美元新一轮融资，投后估值超过 30 亿美元" [level=6] [ref=e140]
+          - paragraph [ref=e141]: 日前，知名在线教育机构猿辅导公司宣布完成了新一轮 3 亿美元融资，本轮融资由腾讯公司领投，华平投资、经纬中国等跟投。当前，“人工智能 + 教育”正在成为新的热点，诸多互联网教育领域的创业企业，都迅速布局这一领域，以技术提高教育水准和效率。
+          - link "查看详情" [ref=e142] [cursor=pointer]:
+            - /url: https://36kr.com/p/5168892
+        - generic [ref=e144]:
+          - img [ref=e145]
+          - heading "三科学家玩直播科普 吸引逾十万中小学生" [level=6] [ref=e146]
+          - paragraph [ref=e147]: 这 3 位科学家分别是中科院物理所魏红祥、梁文杰、程金光，8 月底他们分别以“探索神秘的物理世界”“揭秘纳米材料的奇妙性质”“压强的应用和探索” 3 个主题，在直播课程平台猿辅导上，通过实验视频展示、模型分析等方式为学生们奉上一场科普大餐。
+          - link "查看详情" [ref=e148] [cursor=pointer]:
+            - /url: http://news.cyol.com/yuanchuang/2018-09/03/content_17546393.htm
+        - generic [ref=e150]:
+          - img [ref=e151]
+          - heading "猿辅导独家课程获“学习强国”重点推荐" [level=6] [ref=e152]
+          - paragraph [ref=e153]: 近日，猿辅导独家课程《古典音乐启蒙课》入选“学习强国”，并获重点推荐，“学习强国”正式推出了“中小学暑期课堂”，这套音乐启蒙课由猿辅导和中央音乐学院副教授、著名儿童音乐教育学家陈小龙老师共同打造。
+          - link "查看详情" [ref=e154] [cursor=pointer]:
+            - /url: http://it.people.com.cn/n1/2019/0903/c1009-31334121.html
+        - generic [ref=e156]:
+          - img [ref=e157]
+          - heading "教与学 更智能：猿辅导以科技创新推动教育发展" [level=6] [ref=e158]
+          - paragraph [ref=e159]: “猿辅导以科技创新推动教育发展，人工智能与教育深度融合，让教与学更智能，提升教学效率与效果，促进教育公平。”
+          - link "查看详情" [ref=e160] [cursor=pointer]:
+            - /url: https://wap.peopleapp.com/article/4661127/4544375
+        - generic [ref=e162]:
+          - img [ref=e163]
+          - heading "教育部公布首批教育 APP 备案名单：猿辅导等 152 款 APP 通过备案" [level=6] [ref=e164]
+          - paragraph [ref=e165]: 教育部公布了第一批 152 款教育移动互联网应用程序备案名单，猿辅导及旗下小猿搜题、小猿口算等 6 款应用通过了首批备案审核。这份备案名单的出炉，将为广大用户选择教育类 APP 提供权威参考。
+          - link "查看详情" [ref=e166] [cursor=pointer]:
+            - /url: https://www.chinanews.com/business/2019/12-17/9035928.shtml
+  - generic [ref=e167]:
+    - generic [ref=e170] [cursor=pointer]: 扫码下载
+    - generic [ref=e173] [cursor=pointer]: 在线咨询
+    - generic [ref=e176] [cursor=pointer]: 资料领取
+  - generic [ref=e177]:
+    - link "供应商招募" [ref=e178] [cursor=pointer]:
+      - /url: /index/suppliers
+    - text: "|"
+    - link "广播电视节目制作经营许可证（京）字第10596号" [ref=e179] [cursor=pointer]:
+      - /url: https://m.yuanfudao.com/native/license/broadcast-certificate
+    - text: "|"
+    - link "营业执照" [ref=e180] [cursor=pointer]:
+      - /url: https://m.yuanfudao.com/native/license/business-license
+    - link "京ICP备12032703号" [ref=e181] [cursor=pointer]:
+      - /url: http://beian.miit.gov.cn
+    - text: "|"
+    - link "京ICP证130009号" [ref=e182] [cursor=pointer]:
+      - /url: https://m.yuanfudao.com/native/license/tel-bussiness-license
+    - text: "|"
+    - link "京公网安备11010502033993" [ref=e183] [cursor=pointer]:
+      - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010502033993
+    - text: "|"
+    - link "京网文 (2024) 1288-062号" [ref=e184] [cursor=pointer]:
+      - /url: https://m.yuanfudao.com/native/license/website-certificate
+    - text: "|"
+    - link "出版物经营许可证" [ref=e185] [cursor=pointer]:
+      - /url: https://m.yuanfudao.com/native/license/publish-certificate
+    - text: "|北京猿力科技有限公司 版权所有"
+    - link "媒体接洽：pr@kanyun.com" [ref=e186] [cursor=pointer]:
+      - /url: mailto:pr@kanyun.com
+    - text: "|"
+    - link "网上有害信息举报" [ref=e187] [cursor=pointer]:
+      - /url: https://www.12377.cn/
+    - text: "|"
+    - link "服务投诉邮箱：jubao365@kanyun.com" [ref=e188] [cursor=pointer]:
+      - /url: mailto:jubao365@kanyun.com
+    - text: "|"
+    - link "廉政举报邮箱：jubao@kanyun.com" [ref=e189] [cursor=pointer]:
+      - /url: mailto:jubao@kanyun.com
+    - text: "|"
+    - link "知产维权：ipr@kanyun.com" [ref=e190] [cursor=pointer]:
+      - /url: mailto:ipr@kanyun.com
+    - text: 违法和不良信息举报电话：400-078-9100
+  - text: 

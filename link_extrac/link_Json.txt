@@ -1,0 +1,354 @@
+{
+    "code": "0",
+    "message": null,
+    "result": {
+        "pageInfo": {
+            "totalItem": 111,
+            "totalPage": 6,
+            "pageSize": 20,
+            "currentPage": 1
+        },
+        "list": [
+            {
+                "recordId": "68B56F0471CCC21982A6AB2D37576DBA",
+                "questionClusterKey": "E84BCCC3A07BCC13E7A99D0674666464",
+                "questionClusterType": 1,
+                "questionId": "E84BCCC3A07BCC13E7A99D0674666464",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099468084,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/4nMWZXhTevpDNcqBUTi5eZ.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "EDDA3E4E00A02304BA9503E75443C3E4",
+                "questionClusterKey": "2216EC4222941F09B82093778736C7AF",
+                "questionClusterType": 1,
+                "questionId": "2216EC4222941F09B82093778736C7AF",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099468084,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/EAfjsEnpoooFvFocNPZcuD.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "77FABCE52C94A4192D9A5E5DE954E3F7",
+                "questionClusterKey": "34B8EE76E9F635AFDF6575FE1980F9D3",
+                "questionClusterType": 1,
+                "questionId": "34B8EE76E9F635AFDF6575FE1980F9D3",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099467744,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/6NxwKSCZ54PsWoPfWh9dv2.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "0245B40EFFE5DA9291A6F0B3545BF6BA",
+                "questionClusterKey": "06875093BECF889BF59B0255B3D1E7BB",
+                "questionClusterType": 1,
+                "questionId": "06875093BECF889BF59B0255B3D1E7BB",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099466428,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/Jru8XsWT4QonUoLsEAa5ET.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "3355B227D61BF938C370B96EAEEB1FC9",
+                "questionClusterKey": "9615DDDDB2E6F0C6BF8C0A9C5A68EF7D",
+                "questionClusterType": 1,
+                "questionId": "9615DDDDB2E6F0C6BF8C0A9C5A68EF7D",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099466428,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/F562dVncgYjseA5LkkHVx4.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "935AC66384A51A612822ACFEDA5E5021",
+                "questionClusterKey": "C34214DE6E8DD49FC2E35F6A1264043B",
+                "questionClusterType": 1,
+                "questionId": "C34214DE6E8DD49FC2E35F6A1264043B",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099464996,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/CpiWtAXReSpsCsBWkkydL4.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "D6F1B15C9090FA25AA33FB129474AC42",
+                "questionClusterKey": "CbAyZGRw9NGyjheGe87FfR",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099464996,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/xJ484SXYdNCY3nKV3X6yS5.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "1A2079DF008AD1055B174184D5921DA0",
+                "questionClusterKey": "76FAE9877158D54C4EA762624DAE746A",
+                "questionClusterType": 1,
+                "questionId": "76FAE9877158D54C4EA762624DAE746A",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099463229,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/qV8SFtrrrX6dFiPCq2CFWi.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "DB2B6E88FB5D2B34D7A2B455320F4FA0",
+                "questionClusterKey": "jWcSg6PMEWcRPyweQAjNDi",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099460331,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/NWu3kDJs5ZHaCamz3zc8u9.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "5525A9C20A0B71C74063827A5B9378E2",
+                "questionClusterKey": "Tzva2PRQpgCFSbQ5xr8Fz4",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099460331,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/7736oZzbYniwrkc4xL4LTX.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "81495F6A9483A41C7596579B99A2DC80",
+                "questionClusterKey": "TpyWKfELfwaUY2pcMSvcGd",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099459682,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/Dji4KdgcHMQZU2BgSCM52W.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "5799F8B781AF9BC17C1C083E0BDDE877",
+                "questionClusterKey": "7cBNvzCu96iMViydaGBv5n",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099457022,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/fuVNRQGgEo488BJChkbCGV.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "63393C9DE1E2F75AE69D7E876F80B053",
+                "questionClusterKey": "8herKiGgwoi46ouUP9ykEM",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099455575,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/KSKWKq4uoS5pJtNNpUzTg2.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "AA9E0245DC54D090FC687962BC3C4885",
+                "questionClusterKey": "B972E8C78C74AF1119841E567182390C",
+                "questionClusterType": 1,
+                "questionId": "B972E8C78C74AF1119841E567182390C",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099198808,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/n8pcXHbQv5yuWbZc6SVBCL.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "6237BC21C515DB9DF9F99DC14B75EA4D",
+                "questionClusterKey": "DB29A97CB44380C9D4BACE1F0F1B5D6A",
+                "questionClusterType": 1,
+                "questionId": "DB29A97CB44380C9D4BACE1F0F1B5D6A",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099198791,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/6msGrPsLvqRNpurc4NtGGA.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "4CB59EA4F59E5E815396F02F7DEDCA7C",
+                "questionClusterKey": "01FDE9F3B64EE28FED7240B4C33853C3",
+                "questionClusterType": 1,
+                "questionId": "01FDE9F3B64EE28FED7240B4C33853C3",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099198791,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/eiejXEtzNknFGm4sTtWNGE.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "839719870FB021437C5E2326323FA669",
+                "questionClusterKey": "2444FFBCA8708BBA89F8A1D5CBED98DA",
+                "questionClusterType": 1,
+                "questionId": "2444FFBCA8708BBA89F8A1D5CBED98DA",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099196037,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/3PJi7zHXQjURP5gUprxkuP.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "24F6C54CFF260DDC65548BFA20EAEE41",
+                "questionClusterKey": "6B8CFC56D32A5FC004FD65CD0D9CAD36",
+                "questionClusterType": 1,
+                "questionId": "6B8CFC56D32A5FC004FD65CD0D9CAD36",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099195346,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/LvXKrzoqvPc8YW2vHB6qwQ.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "1E7FD6DB328A9D49BF3D4400B061F754",
+                "questionClusterKey": "C5C9F78630E83AB6537493DB4B956B6A",
+                "questionClusterType": 1,
+                "questionId": "C5C9F78630E83AB6537493DB4B956B6A",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099194308,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/eTGV8XaSXeGCxMoDesuDeU.jpg",
+                    "hasErrorAnalysis": false
+                }
+            },
+            {
+                "recordId": "B8E4352353CEECA11807410301803440",
+                "questionClusterKey": "tBxy2tMfjomJgKpnRV5hzU",
+                "questionClusterType": 2,
+                "questionId": "",
+                "scanSourceList": [
+                    1
+                ],
+                "errorRate": "",
+                "classErrorRate": "",
+                "gradeErrorRate": "",
+                "createTime": 1779099192704,
+                "studentErrorQuestionRecordAttribute": {
+                    "annotatedScreenshotUrl": "https://metis-online.fbcontent.cn/metis-tea-ng-homework/tea-error-book/processor/8qVUt3PR8GJTPXNUtMeGpL.jpg",
+                    "hasErrorAnalysis": false
+                }
+            }
+        ]
+    }
+}

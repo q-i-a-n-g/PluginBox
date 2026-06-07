@@ -1,0 +1,10 @@
+1. “评测”按钮位置往下一点，改成绿底白字
+2. “分数识别”和“固定批改”放在最下面
+3. “固定批改”的下拉框的顺序调整为：未批改 对 错 半对 忽略
+4. - 下面2个网页不该出现“评测”按钮，事实上出现了，修改一下
+        - https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/card
+        - https://mapi.yuanfudao.com/evaluation/#/
+    -  改成：只有这2种开头的网站，才出现评测按钮：
+        - https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/holepage/
+        - https://mapi.yuanfudao.com/evaluation/#/evaluation/holepage/
+

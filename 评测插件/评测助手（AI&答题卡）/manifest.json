@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "评测助手（AI&答题卡）",
+  "version": "3.0.0",
+  "description": "支持作答结果、手写识别、答案框、题目框、分数识别、固定批改一键评测。",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "点击手动呼出评测按钮"
+  }
+}

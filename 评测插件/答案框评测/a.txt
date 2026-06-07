@@ -1,0 +1,10 @@
+这个是自动化评测任务，先打开这个链接：
+https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/stage/#/admin/evaluation/holepage/65852/469079/1
+点“答案框”切换到答案框tab，看到的是这样：答案框评测/截屏2026-05-06 上午11.04.07_LONG.png
+有很多按钮像这样：答案框-0-0 对 错 忽略，全部都选“对”。
+再点“题目框”切换到题目框tab，看到的是这样：答案框评测/截屏2026-05-06 上午11.05.10_LONG.png
+有很多按钮像这样：题目框 对 错 忽略，全部都选“对”，其他的按钮都不动，然后点下面的“仅保存”按钮。
+
+再点最下面的“2”跳到第2页，是这样：
+https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/stage/#/admin/evaluation/holepage/65852/469079/2
+重复上面的过程，总共4页，都这样处理。

@@ -1,0 +1,11 @@
+1. “评测”按钮位置已经手动调整，保持这个值
+    - right: 35px; top: 12%;
+    - 把窗口的位置也调整一下
+2. 评测实际执行的过程按tab调整一下顺序
+    - 作答结果、手写识别、答案框、题目框、分数识别、固定批改
+3. 这2种开头的，也出现悬浮按钮
+    - https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/cardPage/
+    - https://mapi.yuanfudao.com/evaluation/#/evaluation/cardPage/
+
+4. 目前支持4种开头的网址，自动识别、出现悬浮按钮；对于它们之外的网站，
+    希望给出一种手动呼出按钮的选择，因为可能是自定义的虚拟环境，也需要能用此插件正常评测
