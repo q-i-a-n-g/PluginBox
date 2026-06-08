@@ -43,10 +43,30 @@
   let currentConfig = { ...DEFAULT_CONFIG };
   let uiState = structuredClone(DEFAULT_UI_STATE);
 
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "TOOLBOX_TOGGLE") {
       toggleToolbox();
+      return false;
     }
+
+    if (message?.type === "TOOLBOX_TOGGLE_TOOL") {
+      (async () => {
+        try {
+          if (!["images", "eval"].includes(message.tool)) {
+            throw new Error("未知工具。");
+          }
+          await ensureUI();
+          await setToolVisible(message.tool, !uiState.tools[message.tool]);
+          hideMainPanel();
+          sendResponse({ ok: true, visible: uiState.tools[message.tool] });
+        } catch (error) {
+          sendResponse({ ok: false, error: error?.message || "操作失败。" });
+        }
+      })();
+      return true;
+    }
+
+    return false;
   });
 
   async function toggleToolbox() {
@@ -75,7 +95,7 @@
     panel.className = "ptb-panel";
     panel.innerHTML = buildPanelHtml();
 
-    pageButton = createFloatingButton("ptb-page-float", "下载", "图片顺序下载");
+    pageButton = createFloatingButton("ptb-page-float", "下载", "顺序下载（线上作业）");
     evalButton = createFloatingButton("ptb-eval-float", "评测", "评测");
     evalPanel = document.createElement("section");
     evalPanel.className = "ptb-eval-panel ptb-float-hidden";
@@ -182,22 +202,22 @@
       .ptb-app-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 22px 12px;
+        gap: 18px 12px;
         padding: 10px 0 2px;
       }
       .ptb-tool-card {
         min-width: 0;
-        min-height: 92px;
+        height: 96px;
         border: 0;
         border-radius: 14px;
         background: transparent;
         color: #e5e7eb;
         cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 9px;
+        display: grid;
+        grid-template-rows: 46px 34px;
+        place-items: center;
+        align-content: center;
+        gap: 8px;
       }
       .ptb-tool-card:hover {
         background: rgba(255, 255, 255, 0.06);
@@ -222,12 +242,19 @@
       .ptb-tool-icon.eval {
         background: linear-gradient(135deg, #f43f5e, #8b5cf6);
       }
+      .ptb-tool-icon.weekly {
+        background: linear-gradient(135deg, #f59e0b, #16a34a);
+      }
       .ptb-tool-name {
         width: 100%;
         color: #d8dee8;
         font-size: 13px;
         line-height: 1.25;
         text-align: center;
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .ptb-floating-tool {
         position: fixed;
@@ -453,11 +480,15 @@
           </button>
           <button class="ptb-tool-card" type="button" data-ptb-tool="images">
             <span class="ptb-tool-icon images">↓</span>
-            <span class="ptb-tool-name">图片<br>顺序下载</span>
+            <span class="ptb-tool-name">顺序下载<br>（线上作业）</span>
           </button>
           <button class="ptb-tool-card" type="button" data-ptb-tool="eval">
             <span class="ptb-tool-icon eval">✓</span>
             <span class="ptb-tool-name">评测</span>
+          </button>
+          <button class="ptb-tool-card" type="button" data-ptb-tool="weekly">
+            <span class="ptb-tool-icon weekly">W</span>
+            <span class="ptb-tool-name">周报工具</span>
           </button>
         </div>
       </div>
@@ -497,6 +528,11 @@
   async function openTool(name) {
     if (name === "links") {
       window.open(chrome.runtime.getURL("link_tool.html"), "_blank", "noopener");
+      hideMainPanel();
+      return;
+    }
+    if (name === "weekly") {
+      window.open(chrome.runtime.getURL("weekly_report.html"), "_blank", "noopener");
       hideMainPanel();
       return;
     }

@@ -3,7 +3,7 @@
 一个 Chrome 插件盒子，适用于Mac/Win，统一包含：
 
 - 链接 提取/预览/下载
-- 图片顺序下载
+- 顺序下载（线上作业）
 - 评测
 
 ## 安装
@@ -38,7 +38,7 @@
 - 粘贴多行链接，可预览/下载图片。
 ![使用示意](assets/screenshots/7.png)
 
-### 2. 图片顺序下载
+### 2. 顺序下载（线上作业）
 
 - 适用于线上作业，网址开头是这个：
     `https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/homework-correct-viewing/...`

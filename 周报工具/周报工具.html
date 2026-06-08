@@ -1,0 +1,2700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>批改评测数据统计工具</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+.header { background: #1a56db; color: white; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header span { font-size: 13px; opacity: 0.8; }
+
+.container { max-width: 1300px; margin: 0 auto; padding: 24px; }
+
+/* 上传区域 */
+.upload-area { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.upload-box {
+  flex: 1; background: white; border: 2px dashed #93c5fd; border-radius: 12px;
+  padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.upload-box:hover, .upload-box.drag-over { border-color: #1a56db; background: #eff6ff; }
+.upload-box .icon { font-size: 36px; margin-bottom: 8px; }
+.upload-box h3 { font-size: 15px; color: #1a56db; margin-bottom: 4px; }
+.upload-box p { color: #6b7280; font-size: 12px; }
+.upload-box .tag { display: inline-block; margin-top: 8px; padding: 3px 10px; background: #eff6ff; color: #1a56db; border-radius: 12px; font-size: 12px; }
+.upload-box input { display: none; }
+.btn-upload { margin-top: 12px; padding: 8px 20px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.btn-upload:hover { background: #1e429f; }
+.upload-box.done { border-color: #16a34a; background: #f0fdf4; }
+.upload-box.done h3 { color: #16a34a; }
+
+.loading { display: none; text-align: center; padding: 40px; background: white; border-radius: 12px; }
+.spinner { width: 36px; height: 36px; border: 4px solid #e5e7eb; border-top-color: #1a56db; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.results { display: none; }
+
+/* 全局筛选栏 */
+.global-filter {
+  background: white; border-radius: 12px 12px 0 0; padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+.global-filter label { font-size: 13px; font-weight: 600; color: #374151; }
+.filter-group { display: flex; gap: 6px; }
+.filter-chip {
+  padding: 5px 14px; border: 1px solid #d1d5db; border-radius: 20px;
+  font-size: 13px; cursor: pointer; background: white; color: #6b7280; transition: all 0.15s;
+}
+.filter-chip:hover { border-color: #1a56db; color: #1a56db; }
+.filter-chip.active { background: #1a56db; color: white; border-color: #1a56db; }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; background: white; padding: 0 20px; border-bottom: 2px solid #e5e7eb; }
+.tab { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: #6b7280; border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: none; transition: all 0.15s; }
+.tab:hover { color: #1a56db; background: #eff6ff; }
+.tab.active { color: #1a56db; background: white; border-color: #e5e7eb; border-bottom-color: white; margin-bottom: -2px; }
+
+.tab-content { background: white; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px; display: none; overflow-x: auto; }
+.tab-content.active { display: block; }
+
+/* 统计卡片 */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card { background: #f8fafc; border-radius: 10px; padding: 14px; text-align: center; border: 1px solid #e5e7eb; }
+.stat-card .num { font-size: 26px; font-weight: 700; color: #1a56db; }
+.stat-card .lbl { font-size: 12px; color: #6b7280; margin-top: 3px; }
+.stat-card.red .num { color: #dc2626; }
+.stat-card.orange .num { color: #d97706; }
+
+/* 学科分组 */
+.subject-group { margin-bottom: 28px; }
+.subject-title {
+  font-size: 15px; font-weight: 700; color: #1e40af; padding: 8px 14px;
+  background: #eff6ff; border-left: 4px solid #1a56db; border-radius: 0 6px 6px 0;
+  margin-bottom: 10px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #1a56db; color: white; padding: 9px 11px; text-align: left; font-weight: 500; white-space: nowrap; }
+td { padding: 8px 11px; border-bottom: 1px solid #f0f0f0; }
+tr:hover td { background: #f8faff; }
+.row-pass td { background: #f0fdf4; }
+.row-fail td { background: #fff5f5; }
+.row-warn td { background: #fffbeb; }
+
+.badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.badge-pass { background: #dcfce7; color: #16a34a; }
+.badge-fail { background: #fee2e2; color: #dc2626; }
+.badge-warn { background: #fef3c7; color: #d97706; }
+.badge-normal { background: #e0f2fe; color: #0369a1; }
+.badge-gray { background: #f3f4f6; color: #6b7280; }
+
+.rate-bar { display: flex; align-items: center; gap: 6px; }
+.bar-bg { flex: 1; height: 7px; background: #e5e7eb; border-radius: 4px; overflow: hidden; min-width: 70px; }
+.bar-fill { height: 100%; border-radius: 4px; }
+.bar-pass { background: #16a34a; }
+.bar-fail { background: #dc2626; }
+
+.filter-bar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+.filter-bar select, .filter-bar input {
+  padding: 6px 11px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; outline: none;
+}
+.filter-bar select:focus, .filter-bar input:focus { border-color: #1a56db; }
+.filter-lbl { font-size: 13px; color: #6b7280; }
+
+.btn-export { margin-left: auto; padding: 7px 18px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; }
+.btn-export:hover { background: #15803d; }
+
+.link-cell a { color: #1a56db; text-decoration: none; font-size: 12px; }
+.link-cell a:hover { text-decoration: underline; }
+
+.pagination { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 14px; font-size: 13px; color: #6b7280; }
+.page-btn { padding: 3px 9px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; background: white; font-size: 13px; }
+.page-btn:hover { background: #eff6ff; border-color: #1a56db; color: #1a56db; }
+.page-btn.active { background: #1a56db; color: white; border-color: #1a56db; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.empty { text-align: center; padding: 32px; color: #9ca3af; font-size: 13px; }
+.info-bar { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 9px 14px; font-size: 12px; color: #1e40af; margin-bottom: 14px; }
+
+.re-upload { margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.btn-reupload { padding: 7px 16px; background: white; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; cursor: pointer; color: #374151; }
+.btn-reupload:hover { border-color: #1a56db; color: #1a56db; }
+.btn-pdf { padding: 7px 18px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; margin-left: auto; }
+.btn-pdf:hover { background: #6d28d9; }
+
+/* 周报头部 */
+.report-header {
+  background: white; border-radius: 12px; padding: 20px 24px;
+  margin-bottom: 16px; border: 1px solid #e5e7eb;
+}
+.report-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.report-title-input {
+  font-size: 22px; font-weight: 700; color: #1e40af; border: none; outline: none;
+  border-bottom: 2px dashed #bfdbfe; padding: 2px 4px; min-width: 300px; background: transparent;
+}
+.report-title-input:focus { border-bottom-color: #1a56db; }
+.report-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+.report-meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; }
+.report-meta-item label { font-weight: 600; color: #374151; white-space: nowrap; }
+.report-meta-input {
+  border: none; border-bottom: 1px dashed #d1d5db; outline: none; font-size: 13px;
+  color: #374151; padding: 1px 4px; min-width: 120px; background: transparent;
+}
+.report-meta-input:focus { border-bottom-color: #1a56db; }
+
+/* 备注区域 */
+.report-notes {
+  background: white; border-radius: 12px; padding: 20px 24px;
+  margin-top: 20px; border: 1px solid #e5e7eb;
+}
+.report-notes h3 { font-size: 15px; font-weight: 700; color: #1e40af; margin-bottom: 12px; border-left: 4px solid #1a56db; padding-left: 10px; }
+.notes-textarea {
+  width: 100%; min-height: 160px; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 12px; font-size: 13px; color: #374151; resize: vertical; outline: none;
+  font-family: inherit; line-height: 1.7;
+}
+.notes-textarea:focus { border-color: #1a56db; }
+.notes-hint { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+
+/* 归因下拉菜单 */
+.cause-wrap { position: relative; display: inline-block; }
+.cause-btn {
+  padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: 12px; cursor: pointer; background: white; color: #374151;
+  white-space: nowrap; min-width: 90px; text-align: left;
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+}
+.cause-btn:hover { border-color: #1a56db; color: #1a56db; }
+.cause-btn.selected { background: #eff6ff; border-color: #1a56db; color: #1a56db; font-weight: 500; }
+.cause-menu {
+  display: none; position: fixed; z-index: 9999;
+  background: white; border: 1px solid #d1d5db; border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 140px; padding: 4px 0;
+}
+.cause-menu.open { display: block; }
+.cause-sub-item {
+  padding: 7px 14px; font-size: 13px; cursor: pointer; color: #374151; white-space: nowrap;
+}
+.cause-sub-item:hover { background: #eff6ff; color: #1a56db; }
+
+details summary { outline: none; }
+details:not([open]) summary .collapse-arrow { transform: rotate(-90deg); display: inline-block; }
+details summary .collapse-arrow { display: inline-block; transition: transform 0.15s; }
+
+.star-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: #d1d5db; padding: 0 4px; line-height: 1; }
+.star-btn.starred { color: #f59e0b; }
+
+/* 打印样式（由导出PDF新窗口使用，主窗口不直接打印） */
+@media print {
+  body { background: white; }
+  .header { display: none; }
+  .re-upload { display: none; }
+  .global-filter { display: none; }
+  .tabs { display: none; }
+  .tab-content { display: none !important; border: none; padding: 16px 0; }
+  #tab0 { display: block !important; }
+  #tab3 { display: block !important; page-break-before: always; }
+  .filter-bar { display: none; }
+  .pagination { display: none; }
+  .btn-export { display: none; }
+  .info-bar { display: none; }
+  .subject-group { page-break-inside: avoid; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  .no-print-col { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>批改评测数据统计工具</h1>
+    <span>上传评测详细统计表，自动生成质检报告</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 上传区域 -->
+  <div class="upload-area" id="uploadArea">
+    <div class="upload-box" id="box1" ondragover="onDrag(event,'box1')" ondragleave="offDrag('box1')" ondrop="onDrop(event,'main')">
+      <div class="icon">📋</div>
+      <h3>评测统计详情（批改）</h3>
+      <p>含批改情况、学生作答、AI可批等字段</p>
+      <span class="tag">必须上传</span><br>
+      <input type="file" id="file1" accept=".xlsx,.xls" onchange="handleFile(this,'main')">
+      <button class="btn-upload" onclick="document.getElementById('file1').click()">选择文件</button>
+    </div>
+    <div class="upload-box" id="box2" ondragover="onDrag(event,'box2')" ondragleave="offDrag('box2')" ondrop="onDrop(event,'score')">
+      <div class="icon">🔢</div>
+      <h3>评测统计详情（分数）</h3>
+      <p>含分数框识别、是否有分数框等字段</p>
+      <span class="tag">选填</span><br>
+      <input type="file" id="file2" accept=".xlsx,.xls" onchange="handleFile(this,'score')">
+      <button class="btn-upload" onclick="document.getElementById('file2').click()">选择文件</button>
+    </div>
+    <div class="upload-box" id="box3" ondragover="onDrag(event,'box3')" ondragleave="offDrag('box3')" ondrop="onDrop(event,'cardMain')">
+      <div class="icon">📖</div>
+      <h3>答题卡统计详情（批改）</h3>
+      <p>含批改情况、答案框识别情况等字段</p>
+      <span class="tag">选填</span><br>
+      <input type="file" id="file3" accept=".xlsx,.xls" onchange="handleFile(this,'cardMain')">
+      <button class="btn-upload" onclick="document.getElementById('file3').click()">选择文件</button>
+    </div>
+    <div class="upload-box" id="box4" ondragover="onDrag(event,'box4')" ondragleave="offDrag('box4')" ondrop="onDrop(event,'cardScore')">
+      <div class="icon">🔣</div>
+      <h3>答题卡统计详情（分数）</h3>
+      <p>含分数框识别情况、是否有分数框等字段</p>
+      <span class="tag">选填</span><br>
+      <input type="file" id="file4" accept=".xlsx,.xls" onchange="handleFile(this,'cardScore')">
+      <button class="btn-upload" onclick="document.getElementById('file4').click()">选择文件</button>
+    </div>
+  </div>
+  <div id="uploadArea2" style="text-align:center;margin-bottom:24px">
+    <button class="btn-upload" style="padding:12px 48px;font-size:16px;border-radius:10px" onclick="runAnalysis()">开始分析</button>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p style="color:#6b7280;font-size:14px">正在分析数据，请稍候...</p>
+  </div>
+
+  <div class="results" id="results">
+    <div class="re-upload">
+      <button class="btn-reupload" onclick="resetAll()">← 重新上传</button>
+      <button class="btn-pdf" onclick="exportPDF()">导出周报</button>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <label style="font-size:13px;color:#6b7280;display:block;margin-bottom:4px">周期数据统计详情链接</label>
+        <input id="linkPeriod" type="url" placeholder="https://..." style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="flex:1;min-width:240px">
+        <label style="font-size:13px;color:#6b7280;display:block;margin-bottom:4px">答题卡数据统计详情链接</label>
+        <input id="linkCard" type="url" placeholder="https://..." style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- 全局筛选 -->
+    <div class="global-filter">
+      <label>统计范围：</label>
+      <div class="filter-group" id="rangeChips">
+        <span class="filter-chip active" data-val="all" onclick="setRange(this)">全部</span>
+        <span class="filter-chip" data-val="ai" onclick="setRange(this)">AI可批</span>
+        <span class="filter-chip" data-val="algo" onclick="setRange(this)">算法可解</span>
+        <span class="filter-chip" data-val="ai_algo" onclick="setRange(this)">AI可批且算法可解</span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(0)">题型满足率汇总</div>
+      <div class="tab" onclick="switchTab(1)">AI批改错误明细</div>
+      <div class="tab" onclick="switchTab(2)">固定批改错误明细</div>
+      <div class="tab" onclick="switchTab(3)">分数识别错误明细</div>
+      <div class="tab" onclick="switchTab(4)">答题卡AI批改</div>
+      <div class="tab" onclick="switchTab(5)">答题卡分数识别</div>
+      <div class="tab" onclick="switchTab(6)">忽略异常检测</div>
+      <div class="tab" onclick="switchTab(7)">本周问题汇总</div>
+    </div>
+
+    <!-- Tab 0: 满足率汇总 -->
+    <div class="tab-content active" id="tab0">
+      <div class="summary-grid" id="summaryCards"></div>
+      <div class="info-bar" id="infoBar">召回率 = (批改正确 + 批改错误) / 总数；准确率 = 批改正确 / (批改正确 + 批改错误)；满足率 = 批改正确 / 总数；忽略不计入总数</div>
+      <div id="summaryContent"></div>
+    </div>
+
+    <!-- Tab 1: AI批改错误明细 -->
+    <div class="tab-content" id="tab1">
+      <div class="filter-bar">
+        <span class="filter-lbl">学科学段：</span>
+        <select id="filterSubject" onchange="onFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">题型：</span>
+        <select id="filterType" onchange="onFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">任务类型：</span>
+        <select id="filterTaskType" onchange="onFilterChange()">
+          <option value="">全部</option>
+          <option value="纯AI">纯AI</option>
+          <option value="固定&AI">固定&AI混合</option>
+          <option value="分数&AI">分数&AI混合</option>
+        </select>
+        <span class="filter-lbl">关键词：</span>
+        <input type="text" id="filterKeyword" placeholder="大题ID / 图片ID..." oninput="onFilterChange()">
+        <button class="btn-export" onclick="exportErrors()">导出错误明细</button>
+      </div>
+      <table style="table-layout:fixed;min-width:1186px">
+        <colgroup>
+          <col style="width:90px">   <!-- 题目ID -->
+          <col style="width:60px">   <!-- 出现次数 -->
+          <col style="width:70px">   <!-- 学科学段 -->
+          <col style="width:65px">   <!-- 题型 -->
+          <col style="width:80px">   <!-- 任务类型 -->
+          <col style="width:160px">  <!-- 任务名 -->
+          <col style="width:110px">  <!-- 图片ID -->
+          <col style="width:40px">   <!-- 页码 -->
+          <col style="width:65px">   <!-- 小题ID -->
+          <col style="width:60px">   <!-- 批改情况 -->
+          <col style="width:60px">   <!-- 学生作答 -->
+          <col style="width:70px">   <!-- 是否大模型 -->
+          <col style="width:45px">   <!-- 链接 -->
+          <col style="width:160px">  <!-- 归因 -->
+          <col style="width:86px">   <!-- 典型标记 -->
+        </colgroup>
+        <thead><tr>
+          <th>题目ID</th><th>出现次数</th><th>学科学段</th><th>题型</th><th>任务类型</th>
+          <th>任务名</th><th>图片ID</th><th>页码</th><th>小题ID</th>
+          <th>批改情况</th><th>学生作答</th><th>是否大模型</th><th>链接</th><th>归因</th><th style="text-align:center">典型标记</th>
+        </tr></thead>
+        <tbody id="errorBody"></tbody>
+      </table>
+      <div class="pagination" id="errorPagination"></div>
+    </div>
+
+    <!-- Tab 2: 固定批改错误明细 -->
+    <div class="tab-content" id="tab2">
+      <div class="filter-bar">
+        <span class="filter-lbl">学科学段：</span>
+        <select id="filterFixedSubject" onchange="onFixedFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">题型：</span>
+        <select id="filterFixedType" onchange="onFixedFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">关键词：</span>
+        <input type="text" id="filterFixedKeyword" placeholder="大题ID / 图片ID..." oninput="onFixedFilterChange()">
+        <button class="btn-export" onclick="exportFixedErrors()">导出固定批改明细</button>
+      </div>
+      <table style="table-layout:fixed;min-width:986px">
+        <colgroup>
+          <col style="width:90px">   <!-- 题目ID -->
+          <col style="width:70px">   <!-- 学科学段 -->
+          <col style="width:65px">   <!-- 题型 -->
+          <col style="width:160px">  <!-- 任务名 -->
+          <col style="width:110px">  <!-- 图片ID -->
+          <col style="width:40px">   <!-- 页码 -->
+          <col style="width:100px">  <!-- 固定批改识别结果 -->
+          <col style="width:45px">   <!-- 链接 -->
+          <col style="width:160px">  <!-- 归因 -->
+          <col style="width:86px">   <!-- 典型标记 -->
+        </colgroup>
+        <thead><tr>
+          <th>题目ID</th><th>学科学段</th><th>题型</th>
+          <th>任务名</th><th>图片ID</th><th>页码</th>
+          <th>固定批改识别结果</th><th>链接</th><th>归因</th><th style="text-align:center">典型标记</th>
+        </tr></thead>
+        <tbody id="fixedErrorBody"></tbody>
+      </table>
+      <div class="pagination" id="fixedErrorPagination"></div>
+    </div>
+
+    <!-- Tab 3: 分数识别错误明细 -->
+    <div class="tab-content" id="tab3">
+      <div class="filter-bar">
+        <span class="filter-lbl">学科学段：</span>
+        <select id="filterScoreSubject" onchange="onScoreFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">关键词：</span>
+        <input type="text" id="filterScoreKeyword" placeholder="大题ID / 图片ID..." oninput="onScoreFilterChange()">
+        <button class="btn-export" onclick="exportScoreErrors()">导出分数识别明细</button>
+      </div>
+      <table style="table-layout:fixed;min-width:886px">
+        <colgroup>
+          <col style="width:90px">   <!-- 题目ID -->
+          <col style="width:70px">   <!-- 学科学段 -->
+          <col style="width:160px">  <!-- 任务名 -->
+          <col style="width:110px">  <!-- 图片ID -->
+          <col style="width:100px">  <!-- 分数框识别情况 -->
+          <col style="width:45px">   <!-- 链接 -->
+          <col style="width:160px">  <!-- 归因 -->
+          <col style="width:86px">   <!-- 典型标记 -->
+        </colgroup>
+        <thead><tr>
+          <th>题目ID</th><th>学科学段</th>
+          <th>任务名</th><th>图片ID</th>
+          <th>分数框识别情况</th><th>链接</th><th>归因</th><th style="text-align:center">典型标记</th>
+        </tr></thead>
+        <tbody id="scoreErrorBody"></tbody>
+      </table>
+      <div class="pagination" id="scoreErrorPagination"></div>
+    </div>
+
+    <!-- Tab 4: 答题卡AI批改 -->
+    <div class="tab-content" id="tab4">
+      <div class="filter-bar">
+        <span class="filter-lbl">学科学段：</span>
+        <select id="filterCardSubject" onchange="onCardFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">题型：</span>
+        <select id="filterCardType" onchange="onCardFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">关键词：</span>
+        <input type="text" id="filterCardKeyword" placeholder="大题ID / 图片ID..." oninput="onCardFilterChange()">
+        <button class="btn-export" onclick="exportCardErrors()">导出答题卡AI批改明细</button>
+      </div>
+      <table style="table-layout:fixed;min-width:1186px">
+        <colgroup>
+          <col style="width:90px">   <!-- 题目ID -->
+          <col style="width:60px">   <!-- 出现次数 -->
+          <col style="width:70px">   <!-- 学科学段 -->
+          <col style="width:65px">   <!-- 题型 -->
+          <col style="width:80px">   <!-- 任务类型 -->
+          <col style="width:160px">  <!-- 任务名 -->
+          <col style="width:110px">  <!-- 图片ID -->
+          <col style="width:40px">   <!-- 页码 -->
+          <col style="width:65px">   <!-- 小题ID -->
+          <col style="width:60px">   <!-- 批改情况 -->
+          <col style="width:60px">   <!-- 学生作答 -->
+          <col style="width:70px">   <!-- 是否大模型 -->
+          <col style="width:45px">   <!-- 链接 -->
+          <col style="width:160px">  <!-- 归因 -->
+          <col style="width:86px">   <!-- 典型标记 -->
+        </colgroup>
+        <thead><tr>
+          <th>题目ID</th><th>出现次数</th><th>学科学段</th><th>题型</th><th>任务类型</th>
+          <th>任务名</th><th>图片ID</th><th>页码</th><th>小题ID</th>
+          <th>批改情况</th><th>学生作答</th><th>是否大模型</th><th>链接</th><th>归因</th><th style="text-align:center">典型标记</th>
+        </tr></thead>
+        <tbody id="cardErrorBody"></tbody>
+      </table>
+      <div class="pagination" id="cardErrorPagination"></div>
+    </div>
+
+    <!-- Tab 5: 答题卡分数识别 -->
+    <div class="tab-content" id="tab5">
+      <div class="filter-bar">
+        <span class="filter-lbl">学科学段：</span>
+        <select id="filterCardScoreSubject" onchange="onCardScoreFilterChange()"><option value="">全部</option></select>
+        <span class="filter-lbl">关键词：</span>
+        <input type="text" id="filterCardScoreKeyword" placeholder="大题ID / 图片ID..." oninput="onCardScoreFilterChange()">
+        <button class="btn-export" onclick="exportCardScoreErrors()">导出答题卡分数识别明细</button>
+      </div>
+      <table style="table-layout:fixed;min-width:886px">
+        <colgroup>
+          <col style="width:90px">   <!-- 题目ID -->
+          <col style="width:70px">   <!-- 学科学段 -->
+          <col style="width:160px">  <!-- 任务名 -->
+          <col style="width:110px">  <!-- 图片ID -->
+          <col style="width:100px">  <!-- 分数框识别情况 -->
+          <col style="width:45px">   <!-- 链接 -->
+          <col style="width:160px">  <!-- 归因 -->
+          <col style="width:86px">   <!-- 典型标记 -->
+        </colgroup>
+        <thead><tr>
+          <th>题目ID</th><th>学科学段</th>
+          <th>任务名</th><th>图片ID</th>
+          <th>分数框识别情况</th><th>链接</th><th>归因</th><th style="text-align:center">典型标记</th>
+        </tr></thead>
+        <tbody id="cardScoreErrorBody"></tbody>
+      </table>
+      <div class="pagination" id="cardScoreErrorPagination"></div>
+    </div>
+
+    <!-- Tab 6: 忽略异常检测 -->
+    <div class="tab-content" id="tab6">
+      <div class="info-bar">
+        忽略分为两类：<b>规则性忽略</b>（满足以下任一：同题有固定批改框、同题有分数框、跨页题同一空在多页出现）和 <b>异常忽略</b>（不满足以上任何规则）。
+        异常忽略率 = 异常忽略 / 总条目，超过 10% 标记为需关注。
+      </div>
+      <div class="filter-bar">
+        <span class="filter-lbl">显示：</span>
+        <select id="filterIgnore" onchange="renderIgnoreTable()">
+          <option value="">全部</option>
+          <option value="warn">仅显示异常（异常忽略率>10%）</option>
+        </select>
+        <span class="filter-lbl">任务类型：</span>
+        <select id="filterIgnoreTaskType" onchange="renderIgnoreTable()">
+          <option value="">全部</option>
+          <option value="纯AI">纯AI</option>
+          <option value="固定&AI">固定&AI混合</option>
+          <option value="分数&AI">分数&AI混合</option>
+        </select>
+        <button class="btn-export" onclick="exportIgnore()">导出忽略检测</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th>任务ID</th><th>子任务ID</th><th>学科学段</th><th>任务类型</th><th>任务名</th>
+          <th>总条目</th><th>忽略合计</th><th>规则性忽略</th><th>异常忽略</th><th>异常忽略率</th><th>正确数</th><th>错误数</th><th>异常判断</th><th>链接</th>
+        </tr></thead>
+        <tbody id="ignoreBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Tab 7: 本周问题汇总 -->
+    <div class="tab-content" id="tab7">
+      <div class="info-bar">自动汇总「批改错误明细」中选择了归因的条目，按归因类别分组展示</div>
+
+      <!-- 不达标满足率汇总 -->
+      <div id="summaryFailSection" style="margin-bottom:32px"></div>
+
+      <!-- 按归因类别聚合的问题列表 -->
+      <div id="summaryNotesByCause"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 常量 =====
+const THRESHOLDS = {
+  '单选题':0.985,'多选题':0.985,'判断题':0.985,'阅读七选五':0.985,
+  '选择匹配':0.985,'完形填空':0.985,'听力单选':0.985,'听力多选':0.985,
+  '听力连线':0.985,'连线题':0.985,
+  '填空题':0.95,'听力填空':0.95,'计算题':0.95,
+  '解答题':0.93,'作文':0.93,'听力解答':0.93,
+};
+const SUBJECT_ORDER = ['小学语文','小学数学','小学英语','初中语文','初中数学','初中英语','初中物理','初中化学'];
+
+// ===== 归因分类 =====
+const CAUSE_TREE = {
+  'AI批改问题': ['真实批改错误','OCR识别错误','题目匹配错误','答案返回顺序错误','题目框识别问题','答案框识别问题','题目录入问题','主观题无法严格批改','其他留痕干扰','页面缺失不清','暂时无法归因'],
+  '固定批改问题': ['框错误','框遗漏','识别错误','算法不可解'],
+  '分数识别问题': ['框错误','框遗漏','识别错误','算法不可解'],
+  '自由批改问题': ['框错误','框遗漏','识别错误','算法不可解'],
+};
+
+// causeMap: rowKey -> {l1, l2}  (l1=一级, l2=二级)
+const causeMap = {};
+
+let _openCauseMenu = null; // 当前打开的菜单key
+
+function getCauseKey(d) { return `${d.子任务id}_${d.大题ID}_${d.小题ID}_${d.图片ID}`; }
+
+function causeLabel(key) {
+  const c = causeMap[key];
+  if (!c) return '选择原因';
+  return c.l2 ? c.l2 : c.l1;
+}
+
+function openCauseMenu(key, btnEl) {
+  // 关闭已有的
+  document.querySelectorAll('.cause-menu.open').forEach(el => el.classList.remove('open'));
+  if (_openCauseMenu === key) { _openCauseMenu = null; return; }
+  _openCauseMenu = key;
+  const menu = document.getElementById('cmenu_' + CSS.escape(key));
+  if (!menu) return;
+  const rect = btnEl.getBoundingClientRect();
+  menu.style.top = '-9999px';
+  menu.style.left = rect.left + 'px';
+  menu.style.display = 'block';
+  const menuH = menu.offsetHeight;
+  menu.style.display = '';
+  const spaceBelow = window.innerHeight - rect.bottom;
+  if (spaceBelow < menuH && rect.top >= menuH) {
+    menu.style.top = (rect.top - menuH - 2) + 'px';
+  } else {
+    menu.style.top = (rect.bottom + 2) + 'px';
+  }
+  menu.style.left = rect.left + 'px';
+  menu.classList.add('open');
+}
+
+
+function selectCause(key, l1, l2) {
+  causeMap[key] = { l1, l2 };
+  // 同步到 notesMap（保持兼容，归因单独存）
+  document.querySelectorAll('.cause-menu.open').forEach(el => el.classList.remove('open'));
+  _openCauseMenu = null;
+  // 更新按钮文字
+  const btn = document.querySelector(`.cause-btn[data-key="${key.replace(/"/g, '\\"')}"]`);
+  if (btn) {
+    btn.textContent = (l2 ? l2 : l1) + ' ▾';
+    btn.classList.add('selected');
+  }
+  renderSummaryNotes();
+}
+
+// 点击其他地方关闭菜单
+document.addEventListener('click', e => {
+  if (!e.target.closest('.cause-wrap')) {
+    document.querySelectorAll('.cause-menu.open').forEach(el => el.classList.remove('open'));
+    _openCauseMenu = null;
+  }
+});
+
+function buildCauseWidget(key, allowedL1 = null) {
+  const label = causeLabel(key);
+  const isSelected = !!causeMap[key];
+  const ek = CSS.escape(key);
+  let menuHtml = `<div class="cause-menu" id="cmenu_${ek}">`;
+  Object.entries(CAUSE_TREE).forEach(([l1, subs]) => {
+    if (allowedL1 && l1 !== allowedL1) return;
+    subs.forEach(l2 => {
+      menuHtml += `<div class="cause-sub-item" onclick="selectCause('${key}','${l1}','${l2}')">${l2}</div>`;
+    });
+  });
+  menuHtml += `</div>`;
+  return `<div class="cause-wrap">
+    <button class="cause-btn${isSelected?' selected':''}" data-key="${key}" onclick="openCauseMenu('${key}',this)">${label} ▾</button>
+    ${menuHtml}
+  </div>`;
+}
+
+// ===== 状态 =====
+let mainRows = null, scoreRows = null;
+let globalRange = 'all';
+let allData = []; // 主表数据（含衍生字段）
+let scoreMap = {}; // 子任务id -> {有分数框: bool}
+let errorPage = 1;
+const PAGE_SIZE = 20;
+
+// 处理后的数据
+let summaryBySubject = {}; // {学科: {题型: {正确,错误,忽略,总}}}
+let errorData = [];        // 批改错误行（含衍生字段）
+let ignoreData = [];       // 忽略异常数据（按子任务）
+let errorDeduped = [];     // 按大题ID去重+计数
+let fixedSummary = { 总:0, 正确:0, 错误:0 };   // 固定批改满足率
+let scoreSummary = { 总:0, 正确:0, 错误:0, 遗漏:0 };   // 分数识别满足率
+let fixedErrorData = [];   // 固定批改错误明细行
+let scoreErrorData = [];   // 分数识别错误明细行
+let fixedErrorPage = 1;
+let scoreErrorPage = 1;
+let cardMainRows = null;   // 答题卡主表
+let cardScoreRows = null;  // 答题卡分数表
+let cardSummary = { 总:0, 正确:0, 错误:0 };    // 答题卡AI批改满足率
+let cardSummaryByType = {};  // 答题卡AI批改按题型聚合
+let cardScoreSummary = { 总:0, 正确:0, 错误:0 }; // 答题卡分数识别满足率
+let cardErrorData = [];    // 答题卡AI批改错误明细
+let cardScoreErrorData = []; // 答题卡分数识别错误明细
+let cardErrorPage = 1;
+let cardScoreErrorPage = 1;
+const starMap = {}; // causeKey -> true（典型问题星标）
+function toggleStar(key, btn) {
+  if (starMap[key]) { delete starMap[key]; btn.textContent = '☆'; btn.style.color = '#d1d5db'; }
+  else { starMap[key] = true; btn.textContent = '★'; btn.style.color = '#f59e0b'; }
+}
+
+// ===== 上传 =====
+function onDrag(e, boxId) { e.preventDefault(); document.getElementById(boxId).classList.add('drag-over'); }
+function offDrag(boxId) { document.getElementById(boxId).classList.remove('drag-over'); }
+function onDrop(e, type) {
+  e.preventDefault();
+  const boxId = type === 'main' ? 'box1' : type === 'score' ? 'box2' : type === 'cardMain' ? 'box3' : 'box4';
+  offDrag(boxId);
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file, type);
+}
+function handleFile(input, type) {
+  if (input.files[0]) readFile(input.files[0], type);
+}
+function readFile(file, type) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const typeMap = { main:'box1', score:'box2', cardMain:'box3', cardScore:'box4' };
+      const boxId = typeMap[type] || 'box1';
+      if (type === 'main') mainRows = rows;
+      else if (type === 'score') scoreRows = rows;
+      else if (type === 'cardMain') cardMainRows = rows;
+      else if (type === 'cardScore') cardScoreRows = rows;
+      const box = document.getElementById(boxId);
+      box.classList.add('done');
+      box.querySelector('h3').textContent = '✓ ' + file.name;
+    } catch(err) { alert('文件解析失败，请确认是正确的Excel格式'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function resetAll() {
+  mainRows = scoreRows = cardMainRows = cardScoreRows = null;
+  allData = []; scoreMap = {};
+  summaryBySubject = {}; errorData = []; ignoreData = []; errorDeduped = [];
+  cardErrorData = []; cardScoreErrorData = [];
+  globalRange = 'all';
+  ['box1','box2','box3','box4'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.classList.remove('done');
+  });
+  document.getElementById('box1').querySelector('h3').textContent = '评测统计详情（批改）';
+  document.getElementById('box2').querySelector('h3').textContent = '评测统计详情（分数）';
+  document.getElementById('box3').querySelector('h3').textContent = '答题卡统计详情（批改）';
+  document.getElementById('box4').querySelector('h3').textContent = '答题卡统计详情（分数）';
+  ['file1','file2','file3','file4'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('uploadArea').style.display = '';
+  document.getElementById('uploadArea2').style.display = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+}
+
+function runAnalysis() {
+  if (!mainRows) { alert('请先上传主表文件'); return; }
+  document.getElementById('uploadArea').style.display = 'none';
+  document.getElementById('uploadArea2').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  setTimeout(() => { analyze(); }, 50);
+}
+
+// ===== 核心分析 =====
+function analyze() {
+  const headers = mainRows[0];
+  const idx = {};
+  headers.forEach((h, i) => idx[h] = i);
+  const data = mainRows.slice(1).filter(r => r.some(c => c !== ''));
+
+  // 构建分数表映射：(子任务id_大题ID) -> 是否有分数框
+  scoreMap = {};
+  if (scoreRows) {
+    const sh = scoreRows[0];
+    const sidx = {};
+    sh.forEach((h, i) => sidx[h] = i);
+    scoreRows.slice(1).forEach(r => {
+      const stid = r[sidx['子任务id']];
+      const qid = r[sidx['大题ID']];
+      const key = `${stid}_${qid}`;
+      if (!scoreMap[stid]) scoreMap[stid] = { hasScore: false };
+      if (r[sidx['是否有分数框']] === '有分数框') {
+        scoreMap[stid].hasScore = true;
+        scoreMap['_scoreKey_' + key] = true; // (子任务,大题)级别的分数框标记
+      }
+    });
+  }
+
+  // 判断每个子任务的任务类型
+  // 先遍历一遍收集固定批改信息（子任务级别 + 大题级别）
+  const fixedSubtasks = new Set();
+  const fixedKeySet = new Set(); // (子任务id_大题ID) 有固定批改框
+  data.forEach(r => {
+    const fix = r[idx['固定批改识别结果']] || '';
+    if (fix !== '' && fix !== '无固定批改框' && fix !== '忽略') {
+      fixedSubtasks.add(r[idx['子任务id']]);
+      fixedKeySet.add(`${r[idx['子任务id']]}_${r[idx['大题ID']]}`);
+    }
+  });
+
+  // 跨页题判断：同子任务内，同(大题ID+小题ID)出现在多个不同图片ID
+  const crossPageKeyPics = {}; // key -> Set of 图片ID
+  data.forEach(r => {
+    const k = `${r[idx['子任务id']]}_${r[idx['大题ID']]}_${r[idx['小题ID']]}`;
+    if (!crossPageKeyPics[k]) crossPageKeyPics[k] = new Set();
+    crossPageKeyPics[k].add(r[idx['图片ID']]);
+  });
+  const crossPageKeys = new Set(
+    Object.entries(crossPageKeyPics).filter(([,pics]) => pics.size > 1).map(([k]) => k)
+  );
+
+  function getTaskType(subtaskId) {
+    const hasFixed = fixedSubtasks.has(subtaskId);
+    const hasScore = scoreMap[subtaskId] && scoreMap[subtaskId].hasScore;
+    if (hasFixed) return '固定&AI';
+    if (hasScore) return '分数&AI';
+    return '纯AI';
+  }
+
+  function getSubject(stage, subject) {
+    return (stage || '') + (subject || '');
+  }
+
+  // 扩展每行数据
+  allData = data.map(r => {
+    const stid = r[idx['子任务id']];
+    const qid = r[idx['大题ID']];
+    const comboKey = `${stid}_${qid}`;
+    const hasFixedFrame = fixedKeySet.has(comboKey);
+    const hasScoreFrame = !!scoreMap['_scoreKey_' + comboKey];
+    const crossKey = `${r[idx['子任务id']]}_${r[idx['大题ID']]}_${r[idx['小题ID']]}`;
+    const isCrossPage = crossPageKeys.has(crossKey);
+    return {
+      _r: r,
+      题型: r[idx['题型']] || '',
+      批改情况: r[idx['批改情况']] || '',
+      学生作答: r[idx['学生作答是否正确']] || '',
+      AI可批: r[idx['是否AI可批']] || '',
+      算法可解: r[idx['作答结果-算法可解评测结果']] || '',
+      是否大模型: r[idx['是否大模型批改']] || '',
+      任务名: r[idx['任务名']] || '',
+      任务id: r[idx['任务id']] || '',
+      子任务id: stid,
+      阶段: r[idx['阶段']] || '',
+      科目: r[idx['科目']] || '',
+      学科: getSubject(r[idx['阶段']], r[idx['科目']]),
+      任务类型: getTaskType(stid),
+      大题ID: qid || '',
+      小题ID: r[idx['小题ID']] || '',
+      图片ID: r[idx['图片ID']] || '',
+      页码: r[idx['页码']] || '',
+      链接: (function() {
+        const tid = r[idx['任务id']] || '';
+        const page = r[idx['页码']] || '1';
+        const cqid = (r[idx['小题ID']] !== undefined && r[idx['小题ID']] !== '' && r[idx['小题ID']] != null) ? r[idx['小题ID']] : '-1';
+        const subid = (r[idx['子式ID']] !== undefined && r[idx['子式ID']] !== '' && r[idx['子式ID']] != null) ? r[idx['子式ID']] : '-1';
+        if (tid && stid && qid) {
+          return `https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/holepage/${tid}/${stid}/${page}?questionId=${qid}&childQuestionId=${cqid}&subItemId=${subid}`;
+        }
+        return r[idx['链接']] || '';
+      })(),
+      有固定批改框: hasFixedFrame,
+      有分数框: hasScoreFrame,
+      跨页: isCrossPage,
+      手写识别: r[idx['手写识别']] || '',
+      答案框识别情况: r[idx['答案框识别情况']] || '',
+      固定批改识别结果: r[idx['固定批改识别结果']] || '',
+      // 忽略类型：规则性忽略 or 异常忽略
+      忽略类型: (hasFixedFrame || hasScoreFrame || isCrossPage) ? '规则性忽略' : '异常忽略',
+    };
+  });
+
+  // 固定批改满足率：主表 固定批改识别结果 字段
+  fixedSummary = { 总:0, 正确:0, 错误:0 };
+  data.forEach(r => {
+    const v = r[idx['固定批改识别结果']] || '';
+    if (v === '' || v === '无固定批改框' || v === '忽略') return;
+    fixedSummary.总++;
+    if (v === '正确') fixedSummary.正确++;
+    else fixedSummary.错误++;
+  });
+
+  // 分数识别满足率：分数表 是否有分数框=是 -> 分数框识别情况
+  scoreSummary = { 总:0, 正确:0, 错误:0, 遗漏:0 };
+  if (scoreRows) {
+    const sh = scoreRows[0];
+    const sidx = {};
+    sh.forEach((h, i) => sidx[h] = i);
+    scoreRows.slice(1).forEach(r => {
+      if (r[sidx['是否有分数框']] !== '有分数框') return;
+      const v = r[sidx['分数框识别情况']] || '';
+      if (v === '' || v === '算法不可解') return;
+      scoreSummary.总++;
+      if (v === '正确') scoreSummary.正确++;
+      else if (v === '遗漏') scoreSummary.遗漏++;
+      else scoreSummary.错误++;
+    });
+  }
+
+  // 填充筛选下拉
+  const subjects = [...new Set(allData.map(d => d.学科))].filter(Boolean).sort((a,b) => {
+    const ai = SUBJECT_ORDER.indexOf(a), bi = SUBJECT_ORDER.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+  const types = [...new Set(allData.map(d => d.题型))].filter(Boolean).sort();
+  const selSub = document.getElementById('filterSubject');
+  selSub.innerHTML = '<option value="">全部</option>';
+  subjects.forEach(s => selSub.innerHTML += `<option value="${s}">${s}</option>`);
+  const selType = document.getElementById('filterType');
+  selType.innerHTML = '<option value="">全部</option>';
+  types.forEach(t => selType.innerHTML += `<option value="${t}">${t}</option>`);
+  // 固定批改筛选下拉（学科、题型均来自 allData 中有固定批改框的行）
+  const fixedSubjects = [...new Set(allData.filter(d=>d.有固定批改框).map(d=>d.学科))].filter(Boolean).sort((a,b)=>{const ai=SUBJECT_ORDER.indexOf(a),bi=SUBJECT_ORDER.indexOf(b);return(ai===-1?99:ai)-(bi===-1?99:bi);});
+  const fixedTypes = [...new Set(allData.filter(d=>d.有固定批改框).map(d=>d.题型))].filter(Boolean).sort();
+  const selFixedSub = document.getElementById('filterFixedSubject');
+  selFixedSub.innerHTML = '<option value="">全部</option>';
+  fixedSubjects.forEach(s => selFixedSub.innerHTML += `<option value="${s}">${s}</option>`);
+  const selFixedType = document.getElementById('filterFixedType');
+  selFixedType.innerHTML = '<option value="">全部</option>';
+  fixedTypes.forEach(t => selFixedType.innerHTML += `<option value="${t}">${t}</option>`);
+  // 分数识别筛选下拉（学科来自 allData 中有分数框的行）
+  const scoreSubjects = [...new Set(allData.filter(d=>d.有分数框).map(d=>d.学科))].filter(Boolean).sort((a,b)=>{const ai=SUBJECT_ORDER.indexOf(a),bi=SUBJECT_ORDER.indexOf(b);return(ai===-1?99:ai)-(bi===-1?99:bi);});
+  const selScoreSub = document.getElementById('filterScoreSubject');
+  selScoreSub.innerHTML = '<option value="">全部</option>';
+  scoreSubjects.forEach(s => selScoreSub.innerHTML += `<option value="${s}">${s}</option>`);
+  // 答题卡筛选下拉（从答题卡主表解析后的数据中获取）
+  // 下拉在 buildCardErrors 执行后由 renderCardErrorTable 内部填充
+
+  rebuildAll();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+}
+
+// ===== 范围筛选 =====
+function setRange(el) {
+  document.querySelectorAll('#rangeChips .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  globalRange = el.dataset.val;
+  rebuildAll();
+}
+
+function matchRange(d) {
+  if (globalRange === 'all') return true;
+  if (globalRange === 'ai') return d.AI可批 === 'AI可批';
+  if (globalRange === 'algo') return d.算法可解 === '是';
+  if (globalRange === 'ai_algo') return d.AI可批 === 'AI可批' && d.算法可解 === '是';
+  return true;
+}
+
+function rebuildAll() {
+  buildSummary();
+  buildErrors();
+  buildFixedErrors();
+  buildScoreErrors();
+  buildCardErrors();
+  buildCardScoreErrors();
+  buildIgnore();
+  renderSummary();
+  renderErrorTable();
+  renderFixedErrorTable();
+  renderScoreErrorTable();
+  renderCardErrorTable();
+  renderCardScoreErrorTable();
+  renderIgnoreTable();
+  renderSummaryNotes();
+}
+
+// ===== 构建满足率数据 =====
+function buildSummary() {
+  summaryBySubject = {};
+  allData.forEach(d => {
+    if (!matchRange(d)) return;
+    const sub = d.学科 || '未知';
+    const 题型 = d.题型;
+    const 批改 = d.批改情况;
+    if (!summaryBySubject[sub]) summaryBySubject[sub] = {};
+    if (!summaryBySubject[sub][题型]) summaryBySubject[sub][题型] = { 正确:0, 错误:0, 忽略:0, 总:0 };
+    if (批改 === '忽略') {
+      summaryBySubject[sub][题型]['忽略']++;
+      // 忽略不计入总数，与平台口径对齐
+    } else {
+      summaryBySubject[sub][题型]['总']++;
+      if (批改 === '正确') summaryBySubject[sub][题型]['正确']++;
+      else if (批改 === '错误') summaryBySubject[sub][题型]['错误']++;
+    }
+  });
+}
+
+// ===== 构建错误明细 =====
+function buildErrors() {
+  // 按大题ID计数
+  const countMap = {};
+  allData.forEach(d => {
+    if (!matchRange(d)) return;
+    if (d.批改情况 !== '错误') return;
+    const key = String(d.大题ID);
+    if (!countMap[key]) countMap[key] = { count: 0, rows: [] };
+    countMap[key].count++;
+    countMap[key].rows.push(d);
+  });
+
+  // 展开，每行带计数，按计数降序；出现次数>4时自动预填归因
+  errorData = [];
+  Object.entries(countMap).sort((a,b) => b[1].count - a[1].count).forEach(([qid, {count, rows}]) => {
+    rows.forEach(d => {
+      errorData.push({ ...d, 题目计数: count });
+      if (count > 4) {
+        const key = getCauseKey(d);
+        if (!causeMap[key]) {
+          if (d.答案框识别情况 === '错误') {
+            causeMap[key] = { l1: 'AI批改问题', l2: '答案框识别问题' };
+          } else if (d.手写识别 === '错误') {
+            causeMap[key] = { l1: 'AI批改问题', l2: 'OCR识别错误' };
+          }
+        }
+      }
+    });
+  });
+}
+
+// ===== 构建固定批改错误明细 =====
+function buildFixedErrors() {
+  fixedErrorData = allData.filter(d => {
+    const v = d.固定批改识别结果 || '';
+    return v !== '' && v !== '无固定批改框' && v !== '忽略' && v !== '正确';
+  });
+  fixedErrorPage = 1;
+}
+
+// ===== 构建分数识别错误明细 =====
+function buildScoreErrors() {
+  scoreErrorData = [];
+  if (!scoreRows) return;
+  const sh = scoreRows[0];
+  const sidx = {};
+  sh.forEach((h, i) => sidx[h] = i);
+  // 构建 (子任务id_大题ID) -> allData 的学科信息映射
+  const infoMap = {};
+  allData.forEach(d => {
+    const k = `${d.子任务id}_${d.大题ID}`;
+    if (!infoMap[k]) infoMap[k] = { 学科: d.学科, 任务名: d.任务名, 任务id: d.任务id, 子任务id: d.子任务id };
+  });
+  scoreRows.slice(1).forEach(r => {
+    if (r[sidx['是否有分数框']] !== '有分数框') return;
+    const v = r[sidx['分数框识别情况']] || '';
+    if (v === '正确' || v === '') return;
+    const stid = r[sidx['子任务id']] || '';
+    const qid = r[sidx['大题ID']] || '';
+    const picId = r[sidx['图片ID']] || '';
+    const info = infoMap[`${stid}_${qid}`] || {};
+    const tid = info.任务id || '';
+    const link = (tid && stid && qid)
+      ? `https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/holepage/${tid}/${stid}/1?questionId=${qid}&childQuestionId=-1&subItemId=-1`
+      : '';
+    scoreErrorData.push({
+      大题ID: qid,
+      学科: info.学科 || '',
+      任务名: info.任务名 || '',
+      图片ID: picId,
+      分数框识别情况: v,
+      链接: link,
+      子任务id: stid,
+      任务id: tid,
+    });
+  });
+  scoreErrorPage = 1;
+}
+
+// ===== 构建答题卡AI批改错误明细 =====
+function buildCardErrors() {
+  cardErrorData = [];
+  cardSummary = { 总:0, 正确:0, 错误:0 };
+  cardSummaryByType = {};
+  if (!cardMainRows) return;
+  const sh = cardMainRows[0];
+  const idx = {};
+  sh.forEach((h, i) => idx[h] = i);
+
+  // 满足率统计（总计 + 按题型），忽略和算法不可解不计入
+  cardMainRows.slice(1).forEach(r => {
+    const v = r[idx['批改情况']] || '';
+    if (v === '' || v === '忽略' || v === '算法不可解') return;
+    const 题型 = r[idx['题型']] || '未知';
+    cardSummary.总++;
+    if (v === '正确') cardSummary.正确++;
+    else if (v === '错误') cardSummary.错误++;
+    if (!cardSummaryByType[题型]) cardSummaryByType[题型] = { 总:0, 正确:0, 错误:0, 忽略:0 };
+    cardSummaryByType[题型].总++;
+    if (v === '正确') cardSummaryByType[题型].正确++;
+    else if (v === '错误') cardSummaryByType[题型].错误++;
+  });
+
+  // 按大题ID计数（错误行）
+  const countMap = {};
+  cardMainRows.slice(1).forEach(r => {
+    if ((r[idx['批改情况']] || '') !== '错误') return;
+    const qid = r[idx['大题ID']] || '';
+    if (!countMap[qid]) countMap[qid] = { count: 0, rows: [] };
+    countMap[qid].count++;
+    countMap[qid].rows.push(r);
+  });
+
+  Object.entries(countMap).sort((a,b) => b[1].count - a[1].count).forEach(([qid, {count, rows}]) => {
+    rows.forEach(r => {
+      const stid = String(r[idx['子任务id']] || '');
+      const tid = String(r[idx['任务id']] || '');
+      const picId = r[idx['图片ID']] || '';
+      const page = r[idx['页码']] || '1';
+      const cqid = r[idx['小题ID']] != null && r[idx['小题ID']] !== '' ? r[idx['小题ID']] : '-1';
+      const subid = r[idx['子式ID']] != null && r[idx['子式ID']] !== '' ? r[idx['子式ID']] : '-1';
+      const link = (tid && stid && qid)
+        ? `https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/cardPage/${tid}/${stid}/${page}?questionId=${qid}&childQuestionId=${cqid}&subItemId=${subid}`
+        : (r[idx['链接']] || '');
+      const d = {
+        大题ID: qid,
+        学科: r[idx['学科']] || r[idx['学科学段']] || '',
+        题型: r[idx['题型']] || '',
+        任务名: r[idx['任务名']] || '',
+        任务id: tid,
+        子任务id: stid,
+        图片ID: picId,
+        页码: page,
+        小题ID: cqid === '-1' ? '' : cqid,
+        批改情况: r[idx['批改情况']] || '',
+        学生作答: r[idx['学生作答是否正确']] || r[idx['学生作答']] || '',
+        是否大模型: r[idx['是否大模型']] || '',
+        手写识别: r[idx['手写识别']] || '',
+        答案框识别情况: r[idx['答案框识别情况']] || '',
+        任务类型: '答题卡',
+        链接: link,
+        题目计数: count,
+      };
+      cardErrorData.push(d);
+      // 自动归因（与AI批改逻辑一致）
+      if (count > 4) {
+        const key = `card_${getCauseKey(d)}`;
+        if (!causeMap[key]) {
+          if (d.答案框识别情况 === '错误') {
+            causeMap[key] = { l1: 'AI批改问题', l2: '答案框识别问题' };
+          } else if (d.手写识别 === '错误') {
+            causeMap[key] = { l1: 'AI批改问题', l2: 'OCR识别错误' };
+          }
+        }
+      }
+    });
+  });
+  cardErrorPage = 1;
+}
+
+// ===== 构建答题卡分数识别错误明细 =====
+function buildCardScoreErrors() {
+  cardScoreErrorData = [];
+  cardScoreSummary = { 总:0, 正确:0, 错误:0 };
+  if (!cardScoreRows) return;
+  const sh = cardScoreRows[0];
+  const sidx = {};
+  sh.forEach((h, i) => sidx[h] = i);
+
+  // 准确率 = 正确 / (正确 + 错误)，总数 = 正确 + 错误（遗漏单独计，不影响准确率达标判断）
+  cardScoreRows.slice(1).forEach(r => {
+    if ((r[sidx['是否有分数框']] || '') !== '有分数框') return;
+    const v = r[sidx['分数识别情况']] || r[sidx['分数框识别情况']] || '';
+    if (v === '' || v === '算法不可解' || v === '未识别' || v === '遗漏') return;
+    cardScoreSummary.总++;
+    if (v === '正确') cardScoreSummary.正确++;
+    else cardScoreSummary.错误++;
+  });
+
+  cardScoreRows.slice(1).forEach(r => {
+    if ((r[sidx['是否有分数框']] || '') !== '有分数框') return;
+    const v = r[sidx['分数识别情况']] || r[sidx['分数框识别情况']] || '';
+    if (v === '' || v === '算法不可解' || v === '未识别' || v === '遗漏' || v === '正确') return;
+    const stid = String(r[sidx['子任务id']] || '');
+    const qid = String(r[sidx['大题ID']] || '');
+    const picId = r[sidx['图片ID']] || '';
+    const tid = String(r[sidx['任务id']] || '');
+    const link = (tid && stid && qid)
+      ? `https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/cardPage/${tid}/${stid}/1?questionId=${qid}&childQuestionId=-1&subItemId=-1`
+      : (r[sidx['链接']] || '');
+    cardScoreErrorData.push({
+      大题ID: qid,
+      学科: r[sidx['学科']] || r[sidx['学科学段']] || '',
+      任务名: r[sidx['任务名']] || '',
+      图片ID: picId,
+      分数框识别情况: v,
+      链接: link,
+      子任务id: stid,
+      任务id: tid,
+    });
+  });
+  cardScoreErrorPage = 1;
+}
+
+// ===== 渲染答题卡AI批改错误明细 =====
+function getFilteredCardErrors() {
+  const subFilter = document.getElementById('filterCardSubject').value;
+  const typeFilter = document.getElementById('filterCardType').value;
+  const keyword = document.getElementById('filterCardKeyword').value.toLowerCase();
+  return cardErrorData.filter(d =>
+    (!subFilter || d.学科 === subFilter) &&
+    (!typeFilter || d.题型 === typeFilter) &&
+    (!keyword || String(d.大题ID).toLowerCase().includes(keyword) || String(d.图片ID).toLowerCase().includes(keyword))
+  );
+}
+function onCardFilterChange() { cardErrorPage = 1; renderCardErrorTable(); }
+
+function renderCardErrorTable() {
+  // 填充筛选下拉
+  const selSub = document.getElementById('filterCardSubject');
+  const selType = document.getElementById('filterCardType');
+  const curSub = selSub.value, curType = selType.value;
+  const cardSubjects = [...new Set(cardErrorData.map(d => d.学科).filter(Boolean))].sort();
+  const cardTypes = [...new Set(cardErrorData.map(d => d.题型).filter(Boolean))].sort();
+  selSub.innerHTML = '<option value="">全部</option>' + cardSubjects.map(s => `<option value="${s}"${s===curSub?' selected':''}>${s}</option>`).join('');
+  selType.innerHTML = '<option value="">全部</option>' + cardTypes.map(t => `<option value="${t}"${t===curType?' selected':''}>${t}</option>`).join('');
+
+  const filtered = getFilteredCardErrors();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (cardErrorPage > totalPages) cardErrorPage = 1;
+  const pageData = filtered.slice((cardErrorPage-1)*PAGE_SIZE, cardErrorPage*PAGE_SIZE);
+  const tbody = document.getElementById('cardErrorBody');
+  if (pageData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="15" class="empty">${cardMainRows ? '暂无答题卡AI批改错误数据' : '请上传答题卡主表文件'}</td></tr>`;
+    document.getElementById('cardErrorPagination').innerHTML = '';
+    return;
+  }
+  const seenCauseKeys = new Set();
+  tbody.innerHTML = pageData.map(d => {
+    const key = `card_${getCauseKey(d)}`;
+    const isFirst = !seenCauseKeys.has(key);
+    if (isFirst) seenCauseKeys.add(key);
+    const link = d.链接 ? `<a href="${d.链接}" target="_blank">查看</a>` : '-';
+    const taskBadge = '<span class="badge badge-normal">答题卡</span>';
+    const 批改Badge = d.批改情况 === '错误' ? '<span class="badge badge-fail">错误</span>'
+      : d.批改情况 === '正确' ? '<span class="badge badge-pass">正确</span>'
+      : `<span class="badge badge-gray">${d.批改情况}</span>`;
+    const causeCell = isFirst
+      ? `<td style="padding:4px 6px">${buildCauseWidget(key, 'AI批改问题')}</td>`
+      : `<td style="padding:4px 6px;color:#9ca3af;font-size:12px;text-align:center">—</td>`;
+    const starCell = isFirst
+      ? `<td style="text-align:center;padding:4px 2px"><button class="star-btn${starMap[key]?' starred':''}" onclick="toggleStar('${key}',this)">${starMap[key]?'★':'☆'}</button></td>`
+      : `<td></td>`;
+    return `<tr>
+      <td style="white-space:nowrap"><b>${d.大题ID}</b></td>
+      <td style="text-align:center;font-weight:700;color:#dc2626">${d.题目计数}</td>
+      <td style="white-space:nowrap">${d.学科}</td>
+      <td style="white-space:nowrap">${d.题型}</td>
+      <td>${taskBadge}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.任务名}">${d.任务名}</td>
+      <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.图片ID}">${d.图片ID}</td>
+      <td style="text-align:center">${d.页码}</td>
+      <td style="white-space:nowrap">${d.小题ID||'-'}</td>
+      <td>${批改Badge}</td>
+      <td>${d.学生作答||'-'}</td>
+      <td style="white-space:nowrap">${d.是否大模型||'-'}</td>
+      <td class="link-cell">${link}</td>
+      ${causeCell}
+      ${starCell}
+    </tr>`;
+  }).join('');
+  const pag = document.getElementById('cardErrorPagination');
+  pag.innerHTML = total > PAGE_SIZE
+    ? `<span style="color:#6b7280;font-size:13px">共 ${total} 条</span>
+       ${cardErrorPage > 1 ? `<button onclick="cardErrorPage--;renderCardErrorTable()">上一页</button>` : ''}
+       <span style="font-size:13px">第 ${cardErrorPage}/${totalPages} 页</span>
+       ${cardErrorPage < totalPages ? `<button onclick="cardErrorPage++;renderCardErrorTable()">下一页</button>` : ''}`
+    : `<span style="color:#6b7280;font-size:13px">共 ${total} 条</span>`;
+}
+
+function exportCardErrors() {
+  const rows = [['题目ID','出现次数','学科学段','题型','任务名','图片ID','页码','小题ID','批改情况','学生作答','是否大模型','链接']];
+  getFilteredCardErrors().forEach(d => {
+    rows.push([d.大题ID, d.题目计数, d.学科, d.题型, d.任务名, d.图片ID, d.页码, d.小题ID||'', d.批改情况, d.学生作答||'', d.是否大模型||'', d.链接]);
+  });
+  dlExcel(rows, '答题卡AI批改错误明细.xlsx');
+}
+
+// ===== 渲染答题卡分数识别错误明细 =====
+function getFilteredCardScoreErrors() {
+  const subFilter = document.getElementById('filterCardScoreSubject').value;
+  const keyword = document.getElementById('filterCardScoreKeyword').value.toLowerCase();
+  return cardScoreErrorData.filter(d =>
+    (!subFilter || d.学科 === subFilter) &&
+    (!keyword || String(d.大题ID).toLowerCase().includes(keyword) || String(d.图片ID).toLowerCase().includes(keyword))
+  );
+}
+function onCardScoreFilterChange() { cardScoreErrorPage = 1; renderCardScoreErrorTable(); }
+
+function renderCardScoreErrorTable() {
+  const selSub = document.getElementById('filterCardScoreSubject');
+  const curSub = selSub.value;
+  const cardScoreSubjects = [...new Set(cardScoreErrorData.map(d => d.学科).filter(Boolean))].sort();
+  selSub.innerHTML = '<option value="">全部</option>' + cardScoreSubjects.map(s => `<option value="${s}"${s===curSub?' selected':''}>${s}</option>`).join('');
+
+  const filtered = getFilteredCardScoreErrors();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (cardScoreErrorPage > totalPages) cardScoreErrorPage = 1;
+  const pageData = filtered.slice((cardScoreErrorPage-1)*PAGE_SIZE, cardScoreErrorPage*PAGE_SIZE);
+  const tbody = document.getElementById('cardScoreErrorBody');
+  if (pageData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">${cardScoreRows ? '暂无答题卡分数识别错误数据' : '请上传答题卡分数表文件'}</td></tr>`;
+    document.getElementById('cardScoreErrorPagination').innerHTML = '';
+    return;
+  }
+  const seenKeys = new Set();
+  tbody.innerHTML = pageData.map(d => {
+    const causeKey = `cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+    const key = `${d.子任务id}_${d.大题ID}__cardscore`;
+    const isFirst = !seenKeys.has(key);
+    if (isFirst) seenKeys.add(key);
+    const link = d.链接 ? `<a href="${d.链接}" target="_blank">查看</a>` : '-';
+    const causeCell = isFirst
+      ? `<td style="padding:4px 6px">${buildCauseWidget(causeKey, '分数识别问题')}</td>`
+      : `<td style="padding:4px 6px;color:#9ca3af;font-size:12px;text-align:center">—</td>`;
+    const starCell = isFirst
+      ? `<td style="text-align:center;padding:4px 2px"><button class="star-btn${starMap[causeKey]?' starred':''}" onclick="toggleStar('${causeKey}',this)">${starMap[causeKey]?'★':'☆'}</button></td>`
+      : `<td></td>`;
+    const vBadge = d.分数框识别情况 === '错误' ? '<span class="badge badge-fail">错误</span>'
+      : d.分数框识别情况 === '未识别' ? '<span class="badge badge-warn">未识别</span>'
+      : `<span class="badge badge-gray">${d.分数框识别情况}</span>`;
+    return `<tr>
+      <td style="white-space:nowrap"><b>${d.大题ID}</b></td>
+      <td style="white-space:nowrap">${d.学科}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.任务名}">${d.任务名}</td>
+      <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.图片ID}">${d.图片ID}</td>
+      <td>${vBadge}</td>
+      <td class="link-cell">${link}</td>
+      ${causeCell}
+      ${starCell}
+    </tr>`;
+  }).join('');
+  const pag = document.getElementById('cardScoreErrorPagination');
+  pag.innerHTML = total > PAGE_SIZE
+    ? `<span style="color:#6b7280;font-size:13px">共 ${total} 条</span>
+       ${cardScoreErrorPage > 1 ? `<button onclick="cardScoreErrorPage--;renderCardScoreErrorTable()">上一页</button>` : ''}
+       <span style="font-size:13px">第 ${cardScoreErrorPage}/${totalPages} 页</span>
+       ${cardScoreErrorPage < totalPages ? `<button onclick="cardScoreErrorPage++;renderCardScoreErrorTable()">下一页</button>` : ''}`
+    : `<span style="color:#6b7280;font-size:13px">共 ${total} 条</span>`;
+}
+
+function exportCardScoreErrors() {
+  const rows = [['题目ID','学科学段','任务名','图片ID','分数框识别情况','链接']];
+  getFilteredCardScoreErrors().forEach(d => {
+    rows.push([d.大题ID, d.学科, d.任务名, d.图片ID, d.分数框识别情况, d.链接]);
+  });
+  dlExcel(rows, '答题卡分数识别错误明细.xlsx');
+}
+
+// ===== 构建忽略异常 =====
+function buildIgnore() {
+  const taskMap = {};
+  allData.forEach(d => {
+    if (!matchRange(d)) return;
+    const key = `${d.任务id}_${d.子任务id}`;
+    if (!taskMap[key]) taskMap[key] = {
+      任务id: d.任务id, 子任务id: d.子任务id, 任务名: d.任务名,
+      学科: d.学科, 任务类型: d.任务类型,
+      链接: (d.任务id && d.子任务id) ? `https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/holepage/${d.任务id}/${d.子任务id}/1` : '',
+      总:0, 忽略:0, 规则性忽略:0, 异常忽略:0, 正确:0, 错误:0
+    };
+    taskMap[key]['总']++;
+    if (d.批改情况 === '忽略') {
+      taskMap[key]['忽略']++;
+      if (d.忽略类型 === '规则性忽略') taskMap[key]['规则性忽略']++;
+      else taskMap[key]['异常忽略']++;
+    } else if (d.批改情况 === '正确') taskMap[key]['正确']++;
+    else if (d.批改情况 === '错误') taskMap[key]['错误']++;
+  });
+  ignoreData = Object.values(taskMap).sort((a,b) => (b.异常忽略/b.总) - (a.异常忽略/a.总));
+}
+
+// ===== 渲染满足率 =====
+function renderSummary() {
+  // 卡片
+  let total=0, totalErr=0, failTypes=0, totalIgnore=0;
+  Object.values(summaryBySubject).forEach(types => {
+    Object.values(types).forEach(s => {
+      total += s.总; totalErr += s.错误; totalIgnore += s.忽略;
+      const 有效 = s.正确 + s.错误;
+      // count fail
+    });
+  });
+  // count fail types across all subjects
+  const typeAgg = {};
+  Object.values(summaryBySubject).forEach(types => {
+    Object.entries(types).forEach(([题型, s]) => {
+      if (!typeAgg[题型]) typeAgg[题型] = { 正确:0, 错误:0 };
+      typeAgg[题型].正确 += s.正确;
+      typeAgg[题型].错误 += s.错误;
+    });
+  });
+  failTypes = Object.entries(typeAgg).filter(([t, s]) => {
+    const 有效 = s.正确 + s.错误;
+    return 有效 > 0 && (s.正确/有效) < (THRESHOLDS[t] || 0.93);
+  }).length;
+
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="stat-card"><div class="num">${total.toLocaleString()}</div><div class="lbl">统计范围总条目</div></div>
+    <div class="stat-card red"><div class="num">${totalErr.toLocaleString()}</div><div class="lbl">批改错误数</div></div>
+    <div class="stat-card red"><div class="num">${failTypes}</div><div class="lbl">不达标题型数</div></div>
+    <div class="stat-card orange"><div class="num">${totalIgnore.toLocaleString()}</div><div class="lbl">忽略条目数</div></div>
+  `;
+
+  // 整体按题型汇总（不分学科）
+  const container = document.getElementById('summaryContent');
+  container.innerHTML = '';
+
+  const typeAggAll = {};
+  Object.values(summaryBySubject).forEach(types => {
+    Object.entries(types).forEach(([题型, s]) => {
+      if (!typeAggAll[题型]) typeAggAll[题型] = { 正确:0, 错误:0, 忽略:0, 总:0 };
+      typeAggAll[题型].正确 += s.正确;
+      typeAggAll[题型].错误 += s.错误;
+      typeAggAll[题型].忽略 += s.忽略;
+      typeAggAll[题型].总 += s.总;
+    });
+  });
+  let allTypeTbody = '';
+  Object.entries(typeAggAll).sort((a,b) => a[0].localeCompare(b[0])).forEach(([题型, s]) => {
+    const 有效 = s.正确 + s.错误;
+    if (有效 === 0) return;
+    const 召回率 = s.总 > 0 ? 有效 / s.总 : 0;
+    const 准确率 = s.正确 / 有效;
+    const 满足率 = s.总 > 0 ? s.正确 / s.总 : 0;
+    const 阈值 = THRESHOLDS[题型] || 0.93;
+    const 达标 = 满足率 >= 阈值;
+    const badge = 达标
+      ? '<span class="badge badge-pass">✓ 达标</span>'
+      : '<span class="badge badge-fail">✗ 不达标</span>';
+    allTypeTbody += `<tr class="${达标 ? 'row-pass' : 'row-fail'}">
+      <td><b>${题型}</b></td>
+      <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td><td>${s.忽略}</td>
+      <td>${(召回率*100).toFixed(2)}%</td>
+      <td>${(准确率*100).toFixed(2)}%</td>
+      <td${达标 ? '' : ' style="color:#dc2626;font-weight:700"'}>${(满足率*100).toFixed(2)}%</td>
+      <td>${(阈值*100).toFixed(1)}%</td>
+      <td>${badge}</td>
+    </tr>`;
+  });
+  // 辅助：生成固定批改/分数识别单行表
+  // useAccuracy=true 时用准确率判达标（分数识别类），否则用满足率（AI批改类）
+  function buildSingleRow(label, s, threshold, useAccuracy) {
+    if (s.总 === 0) return '';
+    const 有效 = s.正确 + s.错误;
+    const 召回率 = s.总 > 0 ? 有效 / s.总 : 0;
+    const 准确率 = 有效 > 0 ? s.正确 / 有效 : 0;
+    const 满足率 = s.总 > 0 ? s.正确 / s.总 : 0;
+    const 判断值 = useAccuracy ? 准确率 : 满足率;
+    const 达标 = 判断值 >= threshold;
+    const badge = 达标 ? '<span class="badge badge-pass">✓ 达标</span>' : '<span class="badge badge-fail">✗ 不达标</span>';
+    const 准确率显示 = useAccuracy && !达标
+      ? `<td style="color:#dc2626;font-weight:700">${(准确率*100).toFixed(2)}%</td>`
+      : `<td>${(准确率*100).toFixed(2)}%</td>`;
+    const 满足率显示 = !useAccuracy && !达标
+      ? `<td style="color:#dc2626;font-weight:700">${(满足率*100).toFixed(2)}%</td>`
+      : `<td>${(满足率*100).toFixed(2)}%</td>`;
+    const 遗漏列 = useAccuracy ? `<td>${s.遗漏 || 0}</td>` : '';
+    return `<tr class="${达标 ? 'row-pass' : 'row-fail'}">
+      <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td>${遗漏列}
+      <td>${(召回率*100).toFixed(2)}%</td>
+      ${准确率显示}
+      ${满足率显示}
+      <td>${(threshold*100).toFixed(1)}%</td>
+      <td>${badge}</td>
+    </tr>`;
+  }
+
+  const allGroup = document.createElement('div');
+  allGroup.id = 'summaryAllTypes';
+
+  // AI批改：按题型
+  if (allTypeTbody) {
+    allGroup.innerHTML += `<div class="subject-title" style="background:#f0f4ff;border-left-color:#4c6ef5;color:#1e3a8a;margin-bottom:10px">AI批改（全学科按题型）</div>
+      <table style="margin-bottom:20px">
+        <thead><tr><th>题型</th><th>总数</th><th>批改正确</th><th>批改错误</th><th>忽略</th><th>召回率</th><th>准确率</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+        <tbody>${allTypeTbody}</tbody>
+      </table>`;
+  }
+
+  // 固定批改（用满足率判达标）
+  const fixedRow = buildSingleRow('固定批改', fixedSummary, 0.99, false);
+  if (fixedRow) {
+    allGroup.innerHTML += `<div class="subject-title" style="background:#fff7ed;border-left-color:#f97316;color:#7c2d12;margin-bottom:10px">固定批改满足率</div>
+      <table style="margin-bottom:20px">
+        <thead><tr><th>总数</th><th>正确</th><th>错误</th><th>召回率</th><th>准确率</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+        <tbody>${fixedRow}</tbody>
+      </table>`;
+  }
+
+  // 分数识别（用准确率判达标）
+  const scoreRow = buildSingleRow('分数识别', scoreSummary, 0.99, true);
+  if (scoreRow) {
+    allGroup.innerHTML += `<div class="subject-title" style="background:#ecfeff;border-left-color:#0891b2;color:#164e63;margin-bottom:10px">分数识别</div>
+      <table style="margin-bottom:20px">
+        <thead><tr><th>总数</th><th>正确</th><th>错误</th><th>遗漏</th><th>召回率</th><th>准确率</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+        <tbody>${scoreRow}</tbody>
+      </table>`;
+  }
+
+  // 答题卡AI批改（按题型，用满足率判达标）
+  let cardTypeTbody = '';
+  Object.entries(cardSummaryByType).sort((a,b) => a[0].localeCompare(b[0])).forEach(([题型, s]) => {
+    const 有效 = s.正确 + s.错误;
+    if (有效 === 0) return;
+    const 召回率 = s.总 > 0 ? 有效 / s.总 : 0;
+    const 准确率 = s.正确 / 有效;
+    const 满足率 = s.总 > 0 ? s.正确 / s.总 : 0;
+    const 阈值 = THRESHOLDS[题型] || 0.93;
+    const 达标 = 满足率 >= 阈值;
+    const badge = 达标
+      ? '<span class="badge badge-pass">✓ 达标</span>'
+      : '<span class="badge badge-fail">✗ 不达标</span>';
+    cardTypeTbody += `<tr class="${达标 ? 'row-pass' : 'row-fail'}">
+      <td><b>${题型}</b></td>
+      <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td>
+      <td>${(召回率*100).toFixed(2)}%</td>
+      <td>${(准确率*100).toFixed(2)}%</td>
+      <td${达标 ? '' : ' style="color:#dc2626;font-weight:700"'}>${(满足率*100).toFixed(2)}%</td>
+      <td>${(阈值*100).toFixed(1)}%</td>
+      <td>${badge}</td>
+    </tr>`;
+  });
+  if (cardTypeTbody) {
+    allGroup.innerHTML += `<div class="subject-title" style="background:#fdf4ff;border-left-color:#a855f7;color:#581c87;margin-bottom:10px">答题卡AI批改</div>
+      <table style="margin-bottom:20px">
+        <thead><tr><th>题型</th><th>总数</th><th>正确</th><th>错误</th><th>召回率</th><th>准确率</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+        <tbody>${cardTypeTbody}</tbody>
+      </table>`;
+  }
+
+  // 答题卡分数识别（用准确率判达标）
+  const cardScoreRow = buildSingleRow('答题卡分数识别', cardScoreSummary, 0.99, true);
+  if (cardScoreRow) {
+    allGroup.innerHTML += `<div class="subject-title" style="background:#fff8f0;border-left-color:#ea580c;color:#7c2d12;margin-bottom:10px">答题卡分数识别</div>
+      <table style="margin-bottom:20px">
+        <thead><tr><th>总数</th><th>正确</th><th>错误</th><th>遗漏</th><th>召回率</th><th>准确率</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+        <tbody>${cardScoreRow}</tbody>
+      </table>`;
+  }
+
+  if (allTypeTbody || fixedRow || scoreRow || cardTypeTbody || cardScoreRow) {
+    container.appendChild(allGroup);
+  }
+
+  // 分隔线
+  const divider = document.createElement('div');
+  divider.style.cssText = 'border-top:2px dashed #e5e7eb;margin:24px 0';
+  container.appendChild(divider);
+
+  const orderedSubjects = Object.keys(summaryBySubject).sort((a,b) => {
+    const ai = SUBJECT_ORDER.indexOf(a), bi = SUBJECT_ORDER.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  orderedSubjects.forEach(sub => {
+    const types = summaryBySubject[sub];
+    const group = document.createElement('div');
+    group.className = 'subject-group';
+    group.innerHTML = `<div class="subject-title">${sub}</div>`;
+
+    let tbody = '';
+    Object.entries(types).sort((a,b) => a[0].localeCompare(b[0])).forEach(([题型, s]) => {
+      const 有效 = s.正确 + s.错误;
+      if (有效 === 0) return;
+      const 召回率 = s.总 > 0 ? 有效 / s.总 : 0;
+      const 准确率 = s.正确 / 有效;
+      const 满足率 = s.总 > 0 ? s.正确 / s.总 : 0;
+      const 阈值 = THRESHOLDS[题型] || 0.93;
+      const 达标 = 满足率 >= 阈值;
+      const badge = 达标
+        ? '<span class="badge badge-pass">✓ 达标</span>'
+        : '<span class="badge badge-fail">✗ 不达标</span>';
+      tbody += `<tr class="${达标 ? 'row-pass' : 'row-fail'}">
+        <td><b>${题型}</b></td>
+        <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td><td>${s.忽略}</td>
+        <td>${(召回率*100).toFixed(2)}%</td>
+        <td>${(准确率*100).toFixed(2)}%</td>
+        <td${达标 ? '' : ' style="color:#dc2626;font-weight:700"'}>${(满足率*100).toFixed(2)}%</td>
+        <td>${(阈值*100).toFixed(1)}%</td>
+        <td>${badge}</td>
+      </tr>`;
+    });
+
+    if (!tbody) return;
+    group.innerHTML += `<table>
+      <thead><tr><th>题型</th><th>总数</th><th>批改正确</th><th>批改错误</th><th>忽略</th><th>召回率</th><th>准确率</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
+    container.appendChild(group);
+  });
+}
+
+// ===== 渲染错误明细 =====
+function onFilterChange() { errorPage = 1; renderErrorTable(); }
+
+function getFilteredErrors() {
+  const subFilter = document.getElementById('filterSubject').value;
+  const typeFilter = document.getElementById('filterType').value;
+  const taskTypeFilter = document.getElementById('filterTaskType').value;
+  const keyword = document.getElementById('filterKeyword').value.toLowerCase();
+  return errorData.filter(d =>
+    (!subFilter || d.学科 === subFilter) &&
+    (!typeFilter || d.题型 === typeFilter) &&
+    (!taskTypeFilter || d.任务类型 === taskTypeFilter) &&
+    (!keyword || String(d.大题ID).toLowerCase().includes(keyword) || String(d.图片ID).toLowerCase().includes(keyword))
+  );
+}
+
+// 备注存储：rowKey -> 备注文字
+const notesMap = {};
+function getRowKey(d) { return `${d.子任务id}_${d.大题ID}_${d.小题ID}_${d.图片ID}`; }
+
+function onNoteInput(key, val) {
+  if (val.trim()) notesMap[key] = val.trim();
+  else delete notesMap[key];
+  renderSummaryNotes();
+}
+
+function renderErrorTable() {
+  const filtered = getFilteredErrors();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (errorPage > totalPages) errorPage = 1;
+  const pageData = filtered.slice((errorPage-1)*PAGE_SIZE, errorPage*PAGE_SIZE);
+
+  const tbody = document.getElementById('errorBody');
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="14" class="empty">暂无错误数据</td></tr>';
+  } else {
+    const seenCauseKeys = new Set();
+    tbody.innerHTML = pageData.map(d => {
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank">查看</a>` : '-';
+      const taskBadge = d.任务类型 === '纯AI'
+        ? '<span class="badge badge-normal">纯AI</span>'
+        : d.任务类型 === '固定&AI'
+          ? '<span class="badge badge-warn">固定&AI</span>'
+          : '<span class="badge badge-gray">分数&AI</span>';
+      const key = getRowKey(d);
+      const isFirst = !seenCauseKeys.has(key);
+      if (isFirst) seenCauseKeys.add(key);
+      const causeCell = isFirst
+        ? `<td style="padding:4px 6px">${buildCauseWidget(key, 'AI批改问题')}</td>`
+        : `<td style="padding:4px 6px;color:#9ca3af;font-size:12px;text-align:center">—</td>`;
+      const starCell = isFirst
+        ? `<td style="text-align:center;padding:4px 2px"><button class="star-btn${starMap[key]?' starred':''}" onclick="toggleStar('${key}',this)">${starMap[key]?'★':'☆'}</button></td>`
+        : `<td></td>`;
+      return `<tr>
+        <td style="white-space:nowrap"><b>${d.大题ID}</b></td>
+        <td style="text-align:center;font-weight:700;color:#dc2626;white-space:nowrap">${d.题目计数}</td>
+        <td style="white-space:nowrap">${d.学科}</td>
+        <td style="white-space:nowrap">${d.题型}</td>
+        <td style="white-space:nowrap">${taskBadge}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#6b7280" title="${d.任务名}">${d.任务名}</td>
+        <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280" title="${d.图片ID}">${d.图片ID}</td>
+        <td style="white-space:nowrap">${d.页码}</td>
+        <td style="white-space:nowrap">${d.小题ID}</td>
+        <td style="white-space:nowrap"><span class="badge badge-fail">${d.批改情况}</span></td>
+        <td style="white-space:nowrap">${d.学生作答}</td>
+        <td style="white-space:nowrap">${d.是否大模型}</td>
+        <td class="link-cell no-print-col" style="white-space:nowrap">${link}</td>
+        ${causeCell}${starCell}
+      </tr>`;
+    }).join('');
+  }
+
+  // 分页
+  const pag = document.getElementById('errorPagination');
+  pag.innerHTML = `共 ${total} 条&nbsp;&nbsp;`;
+  if (totalPages > 1) {
+    pag.innerHTML += `<button class="page-btn" onclick="changePage(${errorPage-1})" ${errorPage<=1?'disabled':''}>上一页</button>`;
+    for (let i = Math.max(1,errorPage-2); i <= Math.min(totalPages,errorPage+2); i++) {
+      pag.innerHTML += `<button class="page-btn ${i===errorPage?'active':''}" onclick="changePage(${i})">${i}</button>`;
+    }
+    pag.innerHTML += `<button class="page-btn" onclick="changePage(${errorPage+1})" ${errorPage>=totalPages?'disabled':''}>下一页</button>`;
+  }
+}
+function changePage(p) { errorPage = p; renderErrorTable(); }
+
+// ===== 渲染固定批改错误明细 =====
+function getFilteredFixedErrors() {
+  const subFilter = document.getElementById('filterFixedSubject').value;
+  const typeFilter = document.getElementById('filterFixedType').value;
+  const keyword = document.getElementById('filterFixedKeyword').value.toLowerCase();
+  return fixedErrorData.filter(d =>
+    (!subFilter || d.学科 === subFilter) &&
+    (!typeFilter || d.题型 === typeFilter) &&
+    (!keyword || String(d.大题ID).toLowerCase().includes(keyword) || String(d.图片ID).toLowerCase().includes(keyword))
+  );
+}
+function onFixedFilterChange() { fixedErrorPage = 1; renderFixedErrorTable(); }
+function changeFixedPage(p) { fixedErrorPage = p; renderFixedErrorTable(); }
+
+function renderFixedErrorTable() {
+  const filtered = getFilteredFixedErrors();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (fixedErrorPage > totalPages) fixedErrorPage = 1;
+  const pageData = filtered.slice((fixedErrorPage-1)*PAGE_SIZE, fixedErrorPage*PAGE_SIZE);
+  const tbody = document.getElementById('fixedErrorBody');
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">暂无固定批改错误数据</td></tr>';
+  } else {
+    const seenKeys = new Set();
+    tbody.innerHTML = pageData.map(d => {
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank">查看</a>` : '-';
+      const key = 'fixed_' + getCauseKey(d);
+      const isFirst = !seenKeys.has(key);
+      if (isFirst) seenKeys.add(key);
+      const causeCell = isFirst
+        ? `<td style="padding:4px 6px">${buildCauseWidget(key, '固定批改问题')}</td>`
+        : `<td style="padding:4px 6px;color:#9ca3af;font-size:12px;text-align:center">—</td>`;
+      const starCell = isFirst
+        ? `<td style="text-align:center;padding:4px 2px"><button class="star-btn${starMap[key]?' starred':''}" onclick="toggleStar('${key}',this)">${starMap[key]?'★':'☆'}</button></td>`
+        : `<td></td>`;
+      return `<tr>
+        <td style="white-space:nowrap"><b>${d.大题ID}</b></td>
+        <td style="white-space:nowrap">${d.学科}</td>
+        <td style="white-space:nowrap">${d.题型}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#6b7280" title="${d.任务名}">${d.任务名}</td>
+        <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280" title="${d.图片ID}">${d.图片ID}</td>
+        <td style="white-space:nowrap">${d.页码}</td>
+        <td><span class="badge badge-fail">${d.固定批改识别结果}</span></td>
+        <td class="link-cell no-print-col" style="white-space:nowrap">${link}</td>
+        ${causeCell}${starCell}
+      </tr>`;
+    }).join('');
+  }
+  const pag = document.getElementById('fixedErrorPagination');
+  pag.innerHTML = `共 ${total} 条&nbsp;&nbsp;`;
+  if (totalPages > 1) {
+    pag.innerHTML += `<button class="page-btn" onclick="changeFixedPage(${fixedErrorPage-1})" ${fixedErrorPage<=1?'disabled':''}>上一页</button>`;
+    for (let i = Math.max(1,fixedErrorPage-2); i <= Math.min(totalPages,fixedErrorPage+2); i++) {
+      pag.innerHTML += `<button class="page-btn ${i===fixedErrorPage?'active':''}" onclick="changeFixedPage(${i})">${i}</button>`;
+    }
+    pag.innerHTML += `<button class="page-btn" onclick="changeFixedPage(${fixedErrorPage+1})" ${fixedErrorPage>=totalPages?'disabled':''}>下一页</button>`;
+  }
+}
+
+// ===== 渲染分数识别错误明细 =====
+function getFilteredScoreErrors() {
+  const subFilter = document.getElementById('filterScoreSubject').value;
+  const keyword = document.getElementById('filterScoreKeyword').value.toLowerCase();
+  return scoreErrorData.filter(d =>
+    (!subFilter || d.学科 === subFilter) &&
+    (!keyword || String(d.大题ID).toLowerCase().includes(keyword) || String(d.图片ID).toLowerCase().includes(keyword))
+  );
+}
+function onScoreFilterChange() { scoreErrorPage = 1; renderScoreErrorTable(); }
+function changeScorePage(p) { scoreErrorPage = p; renderScoreErrorTable(); }
+
+function renderScoreErrorTable() {
+  const filtered = getFilteredScoreErrors();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (scoreErrorPage > totalPages) scoreErrorPage = 1;
+  const pageData = filtered.slice((scoreErrorPage-1)*PAGE_SIZE, scoreErrorPage*PAGE_SIZE);
+  const tbody = document.getElementById('scoreErrorBody');
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无分数识别错误数据</td></tr>';
+  } else {
+    const seenKeys = new Set();
+    tbody.innerHTML = pageData.map(d => {
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank">查看</a>` : '-';
+      const key = `${d.子任务id}_${d.大题ID}__score`;
+      const isFirst = !seenKeys.has(key);
+      if (isFirst) seenKeys.add(key);
+      const causeKey = `score_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+      const causeCell = isFirst
+        ? `<td style="padding:4px 6px">${buildCauseWidget(causeKey, '分数识别问题')}</td>`
+        : `<td style="padding:4px 6px;color:#9ca3af;font-size:12px;text-align:center">—</td>`;
+      const starCell = isFirst
+        ? `<td style="text-align:center;padding:4px 2px"><button class="star-btn${starMap[causeKey]?' starred':''}" onclick="toggleStar('${causeKey}',this)">${starMap[causeKey]?'★':'☆'}</button></td>`
+        : `<td></td>`;
+      return `<tr>
+        <td style="white-space:nowrap"><b>${d.大题ID}</b></td>
+        <td style="white-space:nowrap">${d.学科}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#6b7280" title="${d.任务名}">${d.任务名}</td>
+        <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280" title="${d.图片ID}">${d.图片ID}</td>
+        <td><span class="badge badge-fail">${d.分数框识别情况}</span></td>
+        <td class="link-cell no-print-col" style="white-space:nowrap">${link}</td>
+        ${causeCell}${starCell}
+      </tr>`;
+    }).join('');
+  }
+  const pag = document.getElementById('scoreErrorPagination');
+  pag.innerHTML = `共 ${total} 条&nbsp;&nbsp;`;
+  if (totalPages > 1) {
+    pag.innerHTML += `<button class="page-btn" onclick="changeScorePage(${scoreErrorPage-1})" ${scoreErrorPage<=1?'disabled':''}>上一页</button>`;
+    for (let i = Math.max(1,scoreErrorPage-2); i <= Math.min(totalPages,scoreErrorPage+2); i++) {
+      pag.innerHTML += `<button class="page-btn ${i===scoreErrorPage?'active':''}" onclick="changeScorePage(${i})">${i}</button>`;
+    }
+    pag.innerHTML += `<button class="page-btn" onclick="changeScorePage(${scoreErrorPage+1})" ${scoreErrorPage>=totalPages?'disabled':''}>下一页</button>`;
+  }
+}
+
+// 列筛选：根据同表格内所有 col-filter 的当前值，显示/隐藏 tbody tr
+function summaryColFilter(selectEl) {
+  const tid = selectEl.dataset.tid;
+  const tbl = document.getElementById('stbl_' + tid);
+  if (!tbl) return;
+  // 收集该表所有筛选器的当前值
+  const filters = {};
+  tbl.querySelectorAll('.col-filter').forEach(s => { filters[s.dataset.attr] = s.value; });
+  tbl.querySelectorAll('tbody tr').forEach(tr => {
+    const matchSubj = !filters.subj || tr.dataset.subj === filters.subj;
+    const matchType = !filters.type || tr.dataset.type === filters.type;
+    tr.style.display = (matchSubj && matchType) ? '' : 'none';
+  });
+}
+
+// ===== 渲染本周问题汇总（有备注的行）=====
+function renderSummaryNotes() {
+  // --- 不达标满足率（整体按题型，不分学科）---
+  const failSection = document.getElementById('summaryFailSection');
+  // 跨学科聚合
+  const typeAggFail = {};
+  Object.values(summaryBySubject).forEach(types => {
+    Object.entries(types).forEach(([题型, s]) => {
+      if (!typeAggFail[题型]) typeAggFail[题型] = { 总:0, 正确:0, 错误:0, 忽略:0 };
+      typeAggFail[题型].总 += s.总;
+      typeAggFail[题型].正确 += s.正确;
+      typeAggFail[题型].错误 += s.错误;
+      typeAggFail[题型].忽略 += s.忽略;
+    });
+  });
+  // AI批改不达标（用满足率=正确/总数判断）
+  let failTbody = '';
+  Object.entries(typeAggFail).sort((a,b) => a[0].localeCompare(b[0])).forEach(([题型, s]) => {
+    const 有效 = s.正确 + s.错误;
+    if (有效 === 0) return;
+    const 满足率 = s.总 > 0 ? s.正确 / s.总 : 0;
+    const 阈值 = THRESHOLDS[题型] || 0.93;
+    if (满足率 >= 阈值) return;
+    failTbody += `<tr class="row-fail">
+      <td><b>${题型}</b></td>
+      <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td><td>${s.忽略}</td>
+      <td style="color:#dc2626;font-weight:700">${(满足率*100).toFixed(2)}%</td>
+      <td>${(阈值*100).toFixed(1)}%</td>
+      <td><span class="badge badge-fail">✗ 不达标</span></td>
+    </tr>`;
+  });
+
+  // 答题卡AI批改不达标（按题型，用满足率判断）
+  let cardFailTbody = '';
+  Object.entries(cardSummaryByType).sort((a,b) => a[0].localeCompare(b[0])).forEach(([题型, s]) => {
+    const 有效 = s.正确 + s.错误;
+    if (有效 === 0) return;
+    const 满足率 = s.总 > 0 ? s.正确 / s.总 : 0;
+    const 阈值 = THRESHOLDS[题型] || 0.93;
+    if (满足率 >= 阈值) return;
+    cardFailTbody += `<tr class="row-fail">
+      <td><b>${题型}</b></td>
+      <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td>
+      <td style="color:#dc2626;font-weight:700">${(满足率*100).toFixed(2)}%</td>
+      <td>${(阈值*100).toFixed(1)}%</td>
+      <td><span class="badge badge-fail">✗ 不达标</span></td>
+    </tr>`;
+  });
+
+  // 分数识别/答题卡分数识别不达标辅助（用准确率判断）
+  function buildFailSingleSection(label, s, threshold, borderColor, useAccuracy) {
+    if (s.总 === 0) return '';
+    const 有效 = s.正确 + s.错误;
+    const 判断值 = useAccuracy ? (有效 > 0 ? s.正确 / 有效 : 0) : (s.总 > 0 ? s.正确 / s.总 : 0);
+    if (判断值 >= threshold) return '';
+    const 列名 = useAccuracy ? '准确率' : '满足率';
+    return `<div style="margin-bottom:12px;font-size:13px;font-weight:600;color:${borderColor};border-left:3px solid ${borderColor};padding-left:8px">${label}</div>
+    <table style="margin-bottom:16px">
+      <thead><tr><th>总数</th><th>正确</th><th>错误</th><th>${列名}</th><th>达标阈值</th><th>状态</th></tr></thead>
+      <tbody><tr class="row-fail">
+        <td>${s.总}</td><td>${s.正确}</td><td>${s.错误}</td>
+        <td style="color:#dc2626;font-weight:700">${(判断值*100).toFixed(2)}%</td>
+        <td>${(threshold*100).toFixed(1)}%</td>
+        <td><span class="badge badge-fail">✗ 不达标</span></td>
+      </tr></tbody>
+    </table>`;
+  }
+
+  const scoreFailHtml = buildFailSingleSection('分数识别', scoreSummary, 0.99, '#0891b2', true);
+  const cardScoreFailHtml = buildFailSingleSection('答题卡分数识别', cardScoreSummary, 0.99, '#ea580c', true);
+
+  let failContent = '';
+  if (failTbody) {
+    failContent += `<div style="margin-bottom:12px;font-size:13px;font-weight:600;color:#4c6ef5;border-left:3px solid #4c6ef5;padding-left:8px">AI批改（按题型）</div>
+    <table style="margin-bottom:16px">
+      <thead><tr><th>题型</th><th>总数</th><th>批改正确</th><th>批改错误</th><th>忽略</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+      <tbody>${failTbody}</tbody>
+    </table>`;
+  }
+  failContent += scoreFailHtml;
+  if (cardFailTbody) {
+    failContent += `<div style="margin-bottom:12px;font-size:13px;font-weight:600;color:#a855f7;border-left:3px solid #a855f7;padding-left:8px">答题卡AI批改（按题型）</div>
+    <table style="margin-bottom:16px">
+      <thead><tr><th>题型</th><th>总数</th><th>正确</th><th>错误</th><th>满足率</th><th>达标阈值</th><th>状态</th></tr></thead>
+      <tbody>${cardFailTbody}</tbody>
+    </table>`;
+  }
+  failContent += cardScoreFailHtml;
+
+  if (failContent) {
+    failSection.innerHTML = failContent;
+  } else {
+    failSection.innerHTML = `<div class="empty" style="padding:16px 0;color:#16a34a;font-weight:600">本周所有类型均已达标 ✓</div>`;
+  }
+
+  // 按 rowKey 去重，避免同key多行重复出现
+  const seenKeys = new Set();
+  const noted = errorData.filter(d => {
+    const k = getRowKey(d);
+    if (!notesMap[k] && !causeMap[k]) return false;
+    if (seenKeys.has(k)) return false;
+    seenKeys.add(k);
+    return true;
+  });
+  const container = document.getElementById('summaryNotesByCause');
+
+  // 检查各类型是否有归因（后面统一渲染，不提前return）
+  const hasScoreCause = scoreErrorData.some(d => causeMap[`score_${d.子任务id}_${d.大题ID}_${d.图片ID}`]);
+  const hasCardCause = cardErrorData.some(d => causeMap[`card_${getCauseKey(d)}`]);
+  const hasCardScoreCause = cardScoreErrorData.some(d => causeMap[`cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`]);
+
+  if (noted.length === 0 && !hasScoreCause && !hasCardCause && !hasCardScoreCause) {
+    container.innerHTML = '<div class="empty" style="padding:32px 0">在「批改错误明细」中选择归因后，自动汇总到此处</div>';
+    return;
+  }
+
+  // 按一级归因分组
+  const groups = {}; // l1 -> rows
+  const noCategory = [];
+  noted.forEach(d => {
+    const key = getRowKey(d);
+    const c = causeMap[key];
+    if (c && c.l1) {
+      if (!groups[c.l1]) groups[c.l1] = [];
+      groups[c.l1].push(d);
+    } else {
+      noCategory.push(d);
+    }
+  });
+
+  function buildRow(d) {
+    const key = getRowKey(d);
+    const c = causeMap[key];
+    const l2 = c && c.l2 ? `<span class="badge badge-gray">${c.l2}</span>` : '-';
+    const link = d.链接 ? `<a href="${d.链接}" target="_blank" style="word-break:break-all;font-size:11px">${d.链接}</a>` : '-';
+    const isStar = !!starMap[key];
+    const starCell = `<td style="text-align:center;padding:4px 2px"><button class="star-btn${isStar?' starred':''}" onclick="toggleStar('${key}',this);renderSummaryNotes()">${isStar?'★':'☆'}</button></td>`;
+    return `<tr data-subj="${d.学科||''}" data-type="${d.题型||''}"${isStar?' style="background:#fffbeb"':''}>
+      <td><b>${d.大题ID}</b></td>
+      <td style="text-align:center;font-weight:700;color:#dc2626">${d.题目计数}</td>
+      <td>${d.学科}</td><td>${d.题型}</td>
+      <td style="white-space:nowrap">${d.任务id || '-'}</td>
+      <td style="white-space:nowrap">${d.子任务id || '-'}</td>
+      <td>${l2}</td>
+      <td class="link-cell" style="white-space:normal;word-break:break-all">${link}</td>
+      ${starCell}
+    </tr>`;
+  }
+
+  // 收集该分组内所有学科/题型选项，用于表头筛选下拉
+  function makeFilterTh(label, attr, allValues, tid) {
+    const opts = ['<option value="">全部</option>', ...allValues.map(v => `<option value="${v}">${v}</option>`)].join('');
+    return `<th style="white-space:nowrap">
+      ${label}<br>
+      <select class="col-filter" data-attr="${attr}" data-tid="${tid}"
+        style="margin-top:3px;font-size:11px;font-weight:400;padding:1px 4px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;max-width:80px"
+        onchange="summaryColFilter(this)">
+        ${opts}
+      </select>
+    </th>`;
+  }
+
+  function buildTableWithFilter(subList, tid) {
+    const allSubj = [...new Set(subList.map(d => d.学科).filter(Boolean))].sort();
+    const allType = [...new Set(subList.map(d => d.题型).filter(Boolean))].sort();
+    const rows = subList.map(buildRow).join('');
+    const th = `<th>题目ID</th><th>出现次数</th>` +
+      makeFilterTh('学科学段', 'subj', allSubj, tid) +
+      makeFilterTh('题型', 'type', allType, tid) +
+      `<th>任务ID</th><th>子任务ID</th><th>归因细类</th><th>链接</th><th style="text-align:center">典型标记</th>`;
+    return `<table id="stbl_${tid}"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  let _tidCounter = 0;
+  function buildGroupTable(list, l1) {
+    const subs = CAUSE_TREE[l1] || [];
+    const subGroups = {};
+    const noSub = [];
+    list.forEach(d => {
+      const c = causeMap[getRowKey(d)];
+      const l2 = c && c.l2 ? c.l2 : null;
+      if (l2) { if (!subGroups[l2]) subGroups[l2] = []; subGroups[l2].push(d); }
+      else { noSub.push(d); }
+    });
+    const hasSubs = subs.some(l2 => subGroups[l2] && subGroups[l2].length > 0) || noSub.length > 0;
+    if (!hasSubs) return '';
+    let sections = '';
+    subs.forEach(l2 => {
+      let subList = subGroups[l2];
+      if (!subList || subList.length === 0) return;
+      subList = [...subList.filter(d => starMap[getRowKey(d)]), ...subList.filter(d => !starMap[getRowKey(d)])];
+      const tid = 'sg_' + (_tidCounter++);
+      sections += `<details open style="margin-bottom:8px">
+        <summary style="cursor:pointer;background:#f0f4ff;padding:6px 10px;font-size:12px;font-weight:600;color:#3b5bdb;border-left:3px solid #4c6ef5;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+          <span class="collapse-arrow" style="font-size:10px">▼</span>${l2} <span style="font-weight:400;color:#6b7280">（${subList.length} 条）</span>
+        </summary>
+        ${buildTableWithFilter(subList, tid)}
+      </details>`;
+    });
+    let noSubSorted = [...noSub.filter(d => starMap[getRowKey(d)]), ...noSub.filter(d => !starMap[getRowKey(d)])];
+    if (noSubSorted.length > 0) {
+      const tid = 'sg_' + (_tidCounter++);
+      sections += `<details open style="margin-bottom:8px">
+        <summary style="cursor:pointer;background:#f9fafb;padding:6px 10px;font-size:12px;font-weight:600;color:#6b7280;border-left:3px solid #d1d5db;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+          <span class="collapse-arrow" style="font-size:10px">▼</span>未细分 <span style="font-weight:400">（${noSubSorted.length} 条）</span>
+        </summary>
+        ${buildTableWithFilter(noSubSorted, tid)}
+      </details>`;
+    }
+    return sections;
+  }
+
+  let html = '';
+  Object.keys(CAUSE_TREE).forEach(l1 => {
+    const list = groups[l1];
+    if (!list || list.length === 0) return;
+    const tableHtml = buildGroupTable(list, l1);
+    if (!tableHtml) return;
+    html += `<details open style="margin-bottom:24px">
+      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #1a56db;margin-bottom:12px;user-select:none">
+        <span class="collapse-arrow" style="font-size:12px;color:#1a56db">▼</span>
+        <span style="font-size:15px;font-weight:700;color:#1e40af">${l1}</span>
+        <span style="font-size:13px;font-weight:400;color:#6b7280">（${list.length} 条）</span>
+      </summary>
+      ${tableHtml}
+    </details>`;
+  });
+  if (noCategory.length > 0) {
+    const noCatSorted = [...noCategory.filter(d => starMap[getRowKey(d)]), ...noCategory.filter(d => !starMap[getRowKey(d)])];
+    const tid = 'sg_' + (_tidCounter++);
+    html += `<details open style="margin-bottom:24px">
+      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #d1d5db;margin-bottom:12px;user-select:none">
+        <span class="collapse-arrow" style="font-size:12px;color:#6b7280">▼</span>
+        <span style="font-size:15px;font-weight:700;color:#6b7280">未归因</span>
+        <span style="font-size:13px;font-weight:400;color:#6b7280">（${noCategory.length} 条）</span>
+      </summary>
+      ${buildTableWithFilter(noCatSorted, tid)}
+    </details>`;
+  }
+  // ===== 分数识别问题 =====
+  const seenScoreKeys = new Set();
+  const scoreCauseItems = scoreErrorData.filter(d => {
+    const ck = `score_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+    if (!causeMap[ck]) return false;
+    if (seenScoreKeys.has(ck)) return false;
+    seenScoreKeys.add(ck);
+    return true;
+  });
+
+  if (scoreCauseItems.length > 0) {
+    // 按一级归因分组
+    const scoreGroups = {};
+    const scoreNoCategory = [];
+    scoreCauseItems.forEach(d => {
+      const ck = `score_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+      const c = causeMap[ck];
+      if (c && c.l1) { if (!scoreGroups[c.l1]) scoreGroups[c.l1] = []; scoreGroups[c.l1].push(d); }
+      else scoreNoCategory.push(d);
+    });
+
+    function buildScoreRow(d) {
+      const ck = `score_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+      const c = causeMap[ck];
+      const l2 = c && c.l2 ? `<span class="badge badge-gray">${c.l2}</span>` : '-';
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank" style="word-break:break-all;font-size:11px">${d.链接}</a>` : '-';
+      const isStar = !!starMap[ck];
+      const starCell = `<td style="text-align:center;padding:4px 2px"><button class="star-btn${isStar?' starred':''}" onclick="toggleStar('${ck}',this);renderSummaryNotes()">${isStar?'★':'☆'}</button></td>`;
+      return `<tr data-subj="${d.学科||''}" data-type=""${isStar?' style="background:#fffbeb"':''}>
+        <td><b>${d.大题ID}</b></td>
+        <td>-</td>
+        <td>${d.学科||'-'}</td><td>-</td>
+        <td style="white-space:nowrap">${d.任务id||'-'}</td>
+        <td style="white-space:nowrap">${d.子任务id||'-'}</td>
+        <td>${l2}</td>
+        <td class="link-cell" style="white-space:normal;word-break:break-all">${link}</td>
+        ${starCell}
+      </tr>`;
+    }
+
+    function buildScoreTableWithFilter(subList, tid) {
+      const allSubj = [...new Set(subList.map(d => d.学科).filter(Boolean))].sort();
+      const rows = subList.map(d => buildScoreRow(d)).join('');
+      const opts = ['<option value="">全部</option>', ...allSubj.map(v => `<option value="${v}">${v}</option>`)].join('');
+      const subjTh = `<th style="white-space:nowrap">学科学段<br>
+        <select class="col-filter" data-attr="subj" data-tid="${tid}"
+          style="margin-top:3px;font-size:11px;font-weight:400;padding:1px 4px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;max-width:80px"
+          onchange="summaryColFilter(this)">${opts}</select></th>`;
+      const th = `<th>题目ID</th><th>出现次数</th>${subjTh}<th>题型</th><th>任务ID</th><th>子任务ID</th><th>归因细类</th><th>链接</th><th style="text-align:center">典型标记</th>`;
+      return `<table id="stbl_${tid}"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    let scoreHtml = '';
+    Object.keys(CAUSE_TREE).forEach(l1 => {
+      const list = scoreGroups[l1];
+      if (!list || list.length === 0) return;
+      const subs = CAUSE_TREE[l1] || [];
+      const subGroups = {};
+      const noSub = [];
+      list.forEach(d => {
+        const ck = `score_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+        const c = causeMap[ck];
+        const l2 = c && c.l2 ? c.l2 : null;
+        if (l2) { if (!subGroups[l2]) subGroups[l2] = []; subGroups[l2].push(d); }
+        else noSub.push(d);
+      });
+      let sections = '';
+      subs.forEach(l2 => {
+        let subList = subGroups[l2];
+        if (!subList || subList.length === 0) return;
+        subList = [...subList.filter(d => starMap[`score_${d.子任务id}_${d.大题ID}_${d.图片ID}`]), ...subList.filter(d => !starMap[`score_${d.子任务id}_${d.大题ID}_${d.图片ID}`])];
+        const tid = 'sg_' + (_tidCounter++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f0f4ff;padding:6px 10px;font-size:12px;font-weight:600;color:#3b5bdb;border-left:3px solid #4c6ef5;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span class="collapse-arrow" style="font-size:10px">▼</span>${l2} <span style="font-weight:400;color:#6b7280">（${subList.length} 条）</span>
+          </summary>
+          ${buildScoreTableWithFilter(subList, tid)}
+        </details>`;
+      });
+      if (noSub.length > 0) {
+        const tid = 'sg_' + (_tidCounter++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f9fafb;padding:6px 10px;font-size:12px;font-weight:600;color:#6b7280;border-left:3px solid #d1d5db;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span class="collapse-arrow" style="font-size:10px">▼</span>未细分 <span style="font-weight:400">（${noSub.length} 条）</span>
+          </summary>
+          ${buildScoreTableWithFilter(noSub, tid)}
+        </details>`;
+      }
+      if (!sections) return;
+      scoreHtml += `<details open style="margin-bottom:24px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #0891b2;margin-bottom:12px;user-select:none">
+          <span class="collapse-arrow" style="font-size:12px;color:#0891b2">▼</span>
+          <span style="font-size:15px;font-weight:700;color:#164e63">${l1}</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${list.length} 条）</span>
+        </summary>
+        ${sections}
+      </details>`;
+    });
+
+    if (scoreHtml) {
+      html += `<div style="margin-top:32px;padding-top:16px;border-top:2px solid #e5e7eb">
+        <div style="font-size:16px;font-weight:700;color:#164e63;margin-bottom:16px">分数识别问题</div>
+        ${scoreHtml}
+      </div>`;
+    }
+  }
+
+  // ===== 答题卡AI批改问题 =====
+  const seenCardKeys = new Set();
+  const cardCauseItems = cardErrorData.filter(d => {
+    const ck = `card_${getCauseKey(d)}`;
+    if (!causeMap[ck]) return false;
+    if (seenCardKeys.has(ck)) return false;
+    seenCardKeys.add(ck);
+    return true;
+  });
+
+  if (cardCauseItems.length > 0) {
+    const cardGroups = {};
+    const cardNoCategory = [];
+    cardCauseItems.forEach(d => {
+      const ck = `card_${getCauseKey(d)}`;
+      const c = causeMap[ck];
+      if (c && c.l1) { if (!cardGroups[c.l1]) cardGroups[c.l1] = []; cardGroups[c.l1].push(d); }
+      else cardNoCategory.push(d);
+    });
+
+    function buildCardRow(d) {
+      const ck = `card_${getCauseKey(d)}`;
+      const c = causeMap[ck];
+      const l2 = c && c.l2 ? `<span class="badge badge-gray">${c.l2}</span>` : '-';
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank" style="word-break:break-all;font-size:11px">${d.链接}</a>` : '-';
+      const isStar = !!starMap[ck];
+      const starCell = `<td style="text-align:center;padding:4px 2px"><button class="star-btn${isStar?' starred':''}" onclick="toggleStar('${ck}',this);renderSummaryNotes()">${isStar?'★':'☆'}</button></td>`;
+      return `<tr data-subj="${d.学科||''}" data-type="${d.题型||''}"${isStar?' style="background:#fffbeb"':''}>
+        <td><b>${d.大题ID}</b></td>
+        <td style="text-align:center;font-weight:700;color:#dc2626">${d.题目计数||'-'}</td>
+        <td>${d.学科||'-'}</td><td>${d.题型||'-'}</td>
+        <td style="white-space:nowrap">${d.任务id||'-'}</td>
+        <td style="white-space:nowrap">${d.子任务id||'-'}</td>
+        <td>${l2}</td>
+        <td class="link-cell" style="white-space:normal;word-break:break-all">${link}</td>
+        ${starCell}
+      </tr>`;
+    }
+
+    function buildCardTableWithFilter(subList, tid) {
+      const allSubj = [...new Set(subList.map(d => d.学科).filter(Boolean))].sort();
+      const allType = [...new Set(subList.map(d => d.题型).filter(Boolean))].sort();
+      const rows = subList.map(buildCardRow).join('');
+      const th = `<th>题目ID</th><th>出现次数</th>` +
+        makeFilterTh('学科学段', 'subj', allSubj, tid) +
+        makeFilterTh('题型', 'type', allType, tid) +
+        `<th>任务ID</th><th>子任务ID</th><th>归因细类</th><th>链接</th><th style="text-align:center">典型标记</th>`;
+      return `<table id="stbl_${tid}"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    let cardHtml = '';
+    Object.keys(CAUSE_TREE).forEach(l1 => {
+      const list = cardGroups[l1];
+      if (!list || list.length === 0) return;
+      const subs = CAUSE_TREE[l1] || [];
+      const subGroups = {};
+      const noSub = [];
+      list.forEach(d => {
+        const ck = `card_${getCauseKey(d)}`;
+        const c = causeMap[ck];
+        const l2 = c && c.l2 ? c.l2 : null;
+        if (l2) { if (!subGroups[l2]) subGroups[l2] = []; subGroups[l2].push(d); }
+        else noSub.push(d);
+      });
+      let sections = '';
+      subs.forEach(l2 => {
+        let subList = subGroups[l2];
+        if (!subList || subList.length === 0) return;
+        subList = [...subList.filter(d => starMap[`card_${getCauseKey(d)}`]), ...subList.filter(d => !starMap[`card_${getCauseKey(d)}`])];
+        const tid = 'sg_' + (_tidCounter++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f0f4ff;padding:6px 10px;font-size:12px;font-weight:600;color:#3b5bdb;border-left:3px solid #4c6ef5;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span class="collapse-arrow" style="font-size:10px">▼</span>${l2} <span style="font-weight:400;color:#6b7280">（${subList.length} 条）</span>
+          </summary>
+          ${buildCardTableWithFilter(subList, tid)}
+        </details>`;
+      });
+      if (noSub.length > 0) {
+        const tid = 'sg_' + (_tidCounter++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f9fafb;padding:6px 10px;font-size:12px;font-weight:600;color:#6b7280;border-left:3px solid #d1d5db;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span class="collapse-arrow" style="font-size:10px">▼</span>未细分 <span style="font-weight:400">（${noSub.length} 条）</span>
+          </summary>
+          ${buildCardTableWithFilter(noSub, tid)}
+        </details>`;
+      }
+      if (!sections) return;
+      cardHtml += `<details open style="margin-bottom:24px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #a855f7;margin-bottom:12px;user-select:none">
+          <span class="collapse-arrow" style="font-size:12px;color:#a855f7">▼</span>
+          <span style="font-size:15px;font-weight:700;color:#581c87">${l1}</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${list.length} 条）</span>
+        </summary>
+        ${sections}
+      </details>`;
+    });
+    if (cardNoCategory.length > 0) {
+      const noCatSorted = [...cardNoCategory.filter(d => starMap[`card_${getCauseKey(d)}`]), ...cardNoCategory.filter(d => !starMap[`card_${getCauseKey(d)}`])];
+      const tid = 'sg_' + (_tidCounter++);
+      cardHtml += `<details open style="margin-bottom:24px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #d1d5db;margin-bottom:12px;user-select:none">
+          <span class="collapse-arrow" style="font-size:12px;color:#6b7280">▼</span>
+          <span style="font-size:15px;font-weight:700;color:#6b7280">未归因</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${cardNoCategory.length} 条）</span>
+        </summary>
+        ${buildCardTableWithFilter(noCatSorted, tid)}
+      </details>`;
+    }
+    if (cardHtml) {
+      html += `<div style="margin-top:32px;padding-top:16px;border-top:2px solid #e5e7eb">
+        <div style="font-size:16px;font-weight:700;color:#581c87;margin-bottom:16px">答题卡AI批改问题</div>
+        ${cardHtml}
+      </div>`;
+    }
+  }
+
+  // ===== 答题卡分数识别问题 =====
+  const seenCardScoreKeys = new Set();
+  const cardScoreCauseItems = cardScoreErrorData.filter(d => {
+    const ck = `cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+    if (!causeMap[ck]) return false;
+    if (seenCardScoreKeys.has(ck)) return false;
+    seenCardScoreKeys.add(ck);
+    return true;
+  });
+
+  if (cardScoreCauseItems.length > 0) {
+    const csGroups = {};
+    const csNoCategory = [];
+    cardScoreCauseItems.forEach(d => {
+      const ck = `cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+      const c = causeMap[ck];
+      if (c && c.l1) { if (!csGroups[c.l1]) csGroups[c.l1] = []; csGroups[c.l1].push(d); }
+      else csNoCategory.push(d);
+    });
+
+    function buildCardScoreRow(d) {
+      const ck = `cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+      const c = causeMap[ck];
+      const l2 = c && c.l2 ? `<span class="badge badge-gray">${c.l2}</span>` : '-';
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank" style="word-break:break-all;font-size:11px">${d.链接}</a>` : '-';
+      const isStar = !!starMap[ck];
+      const starCell = `<td style="text-align:center;padding:4px 2px"><button class="star-btn${isStar?' starred':''}" onclick="toggleStar('${ck}',this);renderSummaryNotes()">${isStar?'★':'☆'}</button></td>`;
+      return `<tr data-subj="${d.学科||''}" data-type=""${isStar?' style="background:#fffbeb"':''}>
+        <td><b>${d.大题ID}</b></td>
+        <td>-</td>
+        <td>${d.学科||'-'}</td><td>-</td>
+        <td style="white-space:nowrap">${d.任务id||'-'}</td>
+        <td style="white-space:nowrap">${d.子任务id||'-'}</td>
+        <td>${l2}</td>
+        <td class="link-cell" style="white-space:normal;word-break:break-all">${link}</td>
+        ${starCell}
+      </tr>`;
+    }
+
+    function buildCardScoreTableWithFilter(subList, tid) {
+      const allSubj = [...new Set(subList.map(d => d.学科).filter(Boolean))].sort();
+      const rows = subList.map(buildCardScoreRow).join('');
+      const opts = ['<option value="">全部</option>', ...allSubj.map(v => `<option value="${v}">${v}</option>`)].join('');
+      const subjTh = `<th style="white-space:nowrap">学科学段<br>
+        <select class="col-filter" data-attr="subj" data-tid="${tid}"
+          style="margin-top:3px;font-size:11px;font-weight:400;padding:1px 4px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;max-width:80px"
+          onchange="summaryColFilter(this)">${opts}</select></th>`;
+      const th = `<th>题目ID</th><th>出现次数</th>${subjTh}<th>题型</th><th>任务ID</th><th>子任务ID</th><th>归因细类</th><th>链接</th><th style="text-align:center">典型标记</th>`;
+      return `<table id="stbl_${tid}"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    let csHtml = '';
+    Object.keys(CAUSE_TREE).forEach(l1 => {
+      const list = csGroups[l1];
+      if (!list || list.length === 0) return;
+      const subs = CAUSE_TREE[l1] || [];
+      const subGroups = {};
+      const noSub = [];
+      list.forEach(d => {
+        const ck = `cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`;
+        const c = causeMap[ck];
+        const l2 = c && c.l2 ? c.l2 : null;
+        if (l2) { if (!subGroups[l2]) subGroups[l2] = []; subGroups[l2].push(d); }
+        else noSub.push(d);
+      });
+      let sections = '';
+      subs.forEach(l2 => {
+        let subList = subGroups[l2];
+        if (!subList || subList.length === 0) return;
+        subList = [...subList.filter(d => starMap[`cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`]), ...subList.filter(d => !starMap[`cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`])];
+        const tid = 'sg_' + (_tidCounter++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f0f4ff;padding:6px 10px;font-size:12px;font-weight:600;color:#3b5bdb;border-left:3px solid #4c6ef5;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span class="collapse-arrow" style="font-size:10px">▼</span>${l2} <span style="font-weight:400;color:#6b7280">（${subList.length} 条）</span>
+          </summary>
+          ${buildCardScoreTableWithFilter(subList, tid)}
+        </details>`;
+      });
+      if (noSub.length > 0) {
+        const tid = 'sg_' + (_tidCounter++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f9fafb;padding:6px 10px;font-size:12px;font-weight:600;color:#6b7280;border-left:3px solid #d1d5db;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span class="collapse-arrow" style="font-size:10px">▼</span>未细分 <span style="font-weight:400">（${noSub.length} 条）</span>
+          </summary>
+          ${buildCardScoreTableWithFilter(noSub, tid)}
+        </details>`;
+      }
+      if (!sections) return;
+      csHtml += `<details open style="margin-bottom:24px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #ea580c;margin-bottom:12px;user-select:none">
+          <span class="collapse-arrow" style="font-size:12px;color:#ea580c">▼</span>
+          <span style="font-size:15px;font-weight:700;color:#7c2d12">${l1}</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${list.length} 条）</span>
+        </summary>
+        ${sections}
+      </details>`;
+    });
+    if (csNoCategory.length > 0) {
+      const noCatSorted = [...csNoCategory.filter(d => starMap[`cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`]), ...csNoCategory.filter(d => !starMap[`cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`])];
+      const tid = 'sg_' + (_tidCounter++);
+      csHtml += `<details open style="margin-bottom:24px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid #d1d5db;margin-bottom:12px;user-select:none">
+          <span class="collapse-arrow" style="font-size:12px;color:#6b7280">▼</span>
+          <span style="font-size:15px;font-weight:700;color:#6b7280">未归因</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${csNoCategory.length} 条）</span>
+        </summary>
+        ${buildCardScoreTableWithFilter(noCatSorted, tid)}
+      </details>`;
+    }
+    if (csHtml) {
+      html += `<div style="margin-top:32px;padding-top:16px;border-top:2px solid #e5e7eb">
+        <div style="font-size:16px;font-weight:700;color:#7c2d12;margin-bottom:16px">答题卡分数识别问题</div>
+        ${csHtml}
+      </div>`;
+    }
+  }
+
+  container.innerHTML = html || '<div class="empty" style="padding:32px 0">暂无符合条件的归因记录</div>';
+}
+
+// ===== 渲染忽略异常 =====
+function renderIgnoreTable() {
+  const filterWarn = document.getElementById('filterIgnore').value;
+  const filterTaskType = document.getElementById('filterIgnoreTaskType').value;
+  let list = ignoreData;
+  if (filterWarn === 'warn') list = list.filter(r => r.总 > 0 && r.异常忽略/r.总 > 0.1);
+  if (filterTaskType) list = list.filter(r => r.任务类型 === filterTaskType);
+
+  const tbody = document.getElementById('ignoreBody');
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="14" class="empty">暂无数据</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => {
+    const 异常忽略率 = r.总 > 0 ? r.异常忽略/r.总 : 0;
+    const isWarn = 异常忽略率 > 0.1;
+    const badge = isWarn
+      ? '<span class="badge badge-warn">⚠ 需关注</span>'
+      : '<span class="badge badge-normal">正常</span>';
+    const taskBadge = r.任务类型 === '纯AI'
+      ? '<span class="badge badge-normal">纯AI</span>'
+      : r.任务类型 === '固定&AI'
+        ? '<span class="badge badge-warn">固定&AI</span>'
+        : '<span class="badge badge-gray">分数&AI</span>';
+    const link = r.链接 ? `<a href="${r.链接}" target="_blank">查看</a>` : '-';
+    return `<tr class="${isWarn?'row-warn':''}">
+      <td>${r.任务id}</td><td>${r.子任务id}</td>
+      <td>${r.学科}</td><td>${taskBadge}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.任务名}">${r.任务名}</td>
+      <td>${r.总}</td>
+      <td>${r.忽略}</td>
+      <td style="color:#6b7280">${r.规则性忽略}</td>
+      <td style="font-weight:600;color:${r.异常忽略>0?'#dc2626':'#6b7280'}">${r.异常忽略}</td>
+      <td style="font-weight:600;color:${isWarn?'#d97706':'#16a34a'}">${(异常忽略率*100).toFixed(1)}%</td>
+      <td>${r.正确}</td><td>${r.错误}</td>
+      <td>${badge}</td>
+      <td class="link-cell">${link}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== Tab切换 =====
+function switchTab(n) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  for (let i = 0; i <= 7; i++) {
+    const el = document.getElementById('tab' + i);
+    if (el) el.classList.toggle('active', i === n);
+  }
+}
+
+// ===== 导出 =====
+function exportErrors() {
+  const filtered = getFilteredErrors();
+  const rows = [['题目ID','出现次数','学科学段','题型','任务类型','任务名','图片ID','页码','小题ID','批改情况','学生作答','是否大模型','链接']];
+  filtered.forEach(d => rows.push([d.大题ID, d.题目计数, d.学科, d.题型, d.任务类型, d.任务名, d.图片ID, d.页码, d.小题ID, d.批改情况, d.学生作答, d.是否大模型, d.链接]));
+  dlExcel(rows, '批改错误明细.xlsx');
+}
+
+function exportFixedErrors() {
+  const filtered = getFilteredFixedErrors();
+  const rows = [['题目ID','学科学段','题型','任务名','图片ID','页码','固定批改识别结果','链接']];
+  filtered.forEach(d => rows.push([d.大题ID, d.学科, d.题型, d.任务名, d.图片ID, d.页码, d.固定批改识别结果, d.链接]));
+  dlExcel(rows, '固定批改错误明细.xlsx');
+}
+
+function exportScoreErrors() {
+  const filtered = getFilteredScoreErrors();
+  const rows = [['题目ID','学科学段','任务名','图片ID','分数框识别情况','链接']];
+  filtered.forEach(d => rows.push([d.大题ID, d.学科, d.任务名, d.图片ID, d.分数框识别情况, d.链接]));
+  dlExcel(rows, '分数识别错误明细.xlsx');
+}
+
+function exportIgnore() {
+  const filterWarn = document.getElementById('filterIgnore').value;
+  const filterTaskType = document.getElementById('filterIgnoreTaskType').value;
+  let list = ignoreData;
+  if (filterWarn === 'warn') list = list.filter(r => r.总 > 0 && r.忽略/r.总 > 0.3);
+  if (filterTaskType) list = list.filter(r => r.任务类型 === filterTaskType);
+  const rows = [['任务ID','子任务ID','学科学段','任务类型','任务名','总条目','忽略合计','规则性忽略','异常忽略','异常忽略率','正确数','错误数','异常判断','链接']];
+  list.forEach(r => {
+    const 异常忽略率 = r.总 > 0 ? r.异常忽略/r.总 : 0;
+    rows.push([r.任务id, r.子任务id, r.学科, r.任务类型, r.任务名, r.总, r.忽略, r.规则性忽略, r.异常忽略, (异常忽略率*100).toFixed(1)+'%', r.正确, r.错误, 异常忽略率>0.1?'需关注':'正常', r.链接]);
+  });
+  dlExcel(rows, '忽略异常检测.xlsx');
+}
+
+function dlExcel(rows, filename) {
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+
+// 周报问题汇总：AI批改/分数识别/答题卡 分tab，列头内嵌筛选
+function buildReportCauseTabs() {
+  let _rptTid = 0;
+
+  function rptMakeFilterTh(label, attr, allValues, tid) {
+    const opts = ['<option value="">全部</option>', ...allValues.map(v => `<option value="${v}">${v}</option>`)].join('');
+    return `<th style="white-space:nowrap">
+      ${label}<br>
+      <select data-attr="${attr}" data-tid="${tid}"
+        style="margin-top:3px;font-size:11px;font-weight:400;padding:1px 4px;border:1px solid rgba(255,255,255,0.4);border-radius:4px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;max-width:80px"
+        onchange="(function(s){var tid=s.dataset.tid,tbl=document.getElementById('rtbl_'+tid);if(!tbl)return;var fs={};tbl.querySelectorAll('thead select').forEach(function(x){fs[x.dataset.attr]=x.value});tbl.querySelectorAll('tbody tr').forEach(function(tr){var ok=(!fs.subj||tr.dataset.subj===fs.subj)&&(!fs.type||tr.dataset.type===fs.type);tr.style.display=ok?'':'none'});})(this)">
+        ${opts}
+      </select>
+    </th>`;
+  }
+
+  function buildCauseSection(getCk, dataList, label) {
+    const seenKeys = new Set();
+    const items = dataList.filter(d => {
+      const ck = getCk(d);
+      if (!causeMap[ck]) return false;
+      if (seenKeys.has(ck)) return false;
+      seenKeys.add(ck);
+      return true;
+    });
+    if (items.length === 0) return `<div class="empty" style="padding:24px 0">暂无${label}问题归因记录</div>`;
+
+    const groups = {};
+    const noCategory = [];
+    items.forEach(d => {
+      const ck = getCk(d);
+      const c = causeMap[ck];
+      if (c && c.l1) { if (!groups[c.l1]) groups[c.l1] = []; groups[c.l1].push({d, ck}); }
+      else noCategory.push({d, ck});
+    });
+
+    function buildRow(d, ck) {
+      const c = causeMap[ck];
+      const l2 = c && c.l2 ? `<span class="badge badge-gray">${c.l2}</span>` : '-';
+      const link = d.链接 ? `<a href="${d.链接}" target="_blank" style="word-break:break-all;font-size:11px">${d.链接}</a>` : '-';
+      const isStar = starMap[ck];
+      const starCell = isStar ? '<td class="star-mark">★</td>' : '<td></td>';
+      return `<tr data-subj="${d.学科||''}" data-type="${d.题型||''}"${isStar ? ' style="background:#fffbeb"' : ''}>
+        ${starCell}
+        <td><b>${d.大题ID}</b></td>
+        <td style="text-align:center;font-weight:700;color:#dc2626">${d.题目计数||'-'}</td>
+        <td>${d.学科||'-'}</td><td>${d.题型||'-'}</td>
+        <td style="white-space:nowrap">${d.任务id||'-'}</td>
+        <td style="white-space:nowrap">${d.子任务id||'-'}</td>
+        <td>${l2}</td>
+        <td class="link-cell" style="white-space:normal;word-break:break-all">${link}</td>
+      </tr>`;
+    }
+
+    function buildTableWithFilter(subList, tid) {
+      const allSubj = [...new Set(subList.map(({d}) => d.学科).filter(Boolean))].sort();
+      const allType = [...new Set(subList.map(({d}) => d.题型).filter(Boolean))].sort();
+      const rows = subList.map(({d,ck}) => buildRow(d, ck)).join('');
+      const th = `<th>★</th><th>题目ID</th><th>出现次数</th>` +
+        rptMakeFilterTh('学科学段', 'subj', allSubj, tid) +
+        rptMakeFilterTh('题型', 'type', allType, tid) +
+        `<th>任务ID</th><th>子任务ID</th><th>归因细类</th><th>链接</th>`;
+      return `<table id="rtbl_${tid}"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function buildGroupHtml(list, l1) {
+      const starred = list.filter(({ck}) => starMap[ck]);
+      const normal = list.filter(({ck}) => !starMap[ck]);
+      const subs = CAUSE_TREE[l1] || [];
+      const subGroups = {};
+      [...starred, ...normal].forEach(({d, ck}) => {
+        const c = causeMap[ck];
+        const l2 = c && c.l2 ? c.l2 : '__none__';
+        if (!subGroups[l2]) subGroups[l2] = [];
+        subGroups[l2].push({d, ck});
+      });
+      let sections = '';
+      subs.forEach(l2 => {
+        const subList = subGroups[l2];
+        if (!subList || subList.length === 0) return;
+        const tid = 'r' + (_rptTid++);
+        sections += `<details open style="margin-bottom:8px">
+          <summary style="cursor:pointer;background:#f0f4ff;padding:6px 10px;font-size:12px;font-weight:600;color:#3b5bdb;border-left:3px solid #4c6ef5;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+            <span style="font-size:10px">▼</span>${l2} <span style="font-weight:400;color:#6b7280">（${subList.length} 条）</span>
+          </summary>
+          ${buildTableWithFilter(subList, tid)}
+        </details>`;
+      });
+      if (subGroups['__none__'] && subGroups['__none__'].length > 0) {
+        const tid = 'r' + (_rptTid++);
+        sections += buildTableWithFilter(subGroups['__none__'], tid);
+      }
+      if (!sections) return '';
+      return `<details open style="margin-bottom:20px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid #1a56db;margin-bottom:10px;user-select:none">
+          <span style="font-size:12px;color:#1a56db">▼</span>
+          <span style="font-size:14px;font-weight:700;color:#1e40af">${l1}</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${list.length} 条）</span>
+        </summary>
+        ${sections}
+      </details>`;
+    }
+
+    let html = '';
+    Object.keys(CAUSE_TREE).forEach(l1 => {
+      const list = groups[l1];
+      if (!list || list.length === 0) return;
+      html += buildGroupHtml(list, l1);
+    });
+    if (noCategory.length > 0) {
+      const tid = 'r' + (_rptTid++);
+      html += `<details open style="margin-bottom:20px">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid #d1d5db;margin-bottom:10px;user-select:none">
+          <span style="font-size:12px;color:#6b7280">▼</span>
+          <span style="font-size:14px;font-weight:700;color:#6b7280">未归因</span>
+          <span style="font-size:13px;font-weight:400;color:#6b7280">（${noCategory.length} 条）</span>
+        </summary>
+        ${buildTableWithFilter(noCategory, tid)}
+      </details>`;
+    }
+    return html || `<div class="empty" style="padding:24px 0">暂无${label}问题归因记录</div>`;
+  }
+
+  const aiHtml = buildCauseSection(d => getCauseKey(d), errorData, 'AI批改');
+  const scoreHtml = buildCauseSection(d => `score_${d.子任务id}_${d.大题ID}_${d.图片ID}`, scoreErrorData, '分数识别');
+  const cardAiHtml = buildCauseSection(d => `card_${getCauseKey(d)}`, cardErrorData, '答题卡AI批改');
+  const cardScoreHtml = buildCauseSection(d => `cardscore_${d.子任务id}_${d.大题ID}_${d.图片ID}`, cardScoreErrorData, '答题卡分数识别');
+
+  return `
+  <div class="rpt-tabs">
+    <div class="rpt-tab active" data-group="cause" onclick="rptSwitchTab(0,'cause')">AI批改问题</div>
+    <div class="rpt-tab" data-group="cause" onclick="rptSwitchTab(1,'cause')">分数识别问题</div>
+    <div class="rpt-tab" data-group="cause" onclick="rptSwitchTab(2,'cause')">答题卡AI批改问题</div>
+    <div class="rpt-tab" data-group="cause" onclick="rptSwitchTab(3,'cause')">答题卡分数识别问题</div>
+  </div>
+  <div class="rpt-tab-content active" data-group="cause">${aiHtml}</div>
+  <div class="rpt-tab-content" data-group="cause">${scoreHtml}</div>
+  <div class="rpt-tab-content" data-group="cause">${cardAiHtml}</div>
+  <div class="rpt-tab-content" data-group="cause">${cardScoreHtml}</div>`;
+}
+
+function exportPDF() {
+  const summaryCardsHtml = document.getElementById('summaryCards').outerHTML;
+  const infoBarHtml = document.getElementById('infoBar').outerHTML;
+  const allTypesEl = document.getElementById('summaryAllTypes');
+
+  // 满足率汇总：只保留 AI批改（按题型）+ 分数识别，去掉固定批改
+  let tab0Html = summaryCardsHtml + infoBarHtml;
+  if (allTypesEl) {
+    // 克隆节点，移除固定批改行
+    const clone = allTypesEl.cloneNode(true);
+    // 找到固定批改的 subject-title 块并移除
+    clone.querySelectorAll('.subject-title').forEach(el => {
+      if (el.textContent.includes('固定批改')) {
+        // 移除该标题和紧跟的 table
+        const next = el.nextElementSibling;
+        if (next && next.tagName === 'TABLE') next.remove();
+        el.remove();
+      }
+    });
+    tab0Html += clone.outerHTML;
+  }
+
+  // 周报不达标：只保留 AI批改 + 分数识别（去掉固定批改）
+  const failEl = document.getElementById('summaryFailSection');
+  let failHtml = '';
+  if (failEl) {
+    const failClone = failEl.cloneNode(true);
+    failClone.querySelectorAll('div').forEach(el => {
+      if (el.textContent.trim().startsWith('固定批改满足率')) {
+        const next = el.nextElementSibling;
+        if (next && next.tagName === 'TABLE') next.remove();
+        el.remove();
+      }
+    });
+    failHtml = failClone.innerHTML;
+  }
+
+  // 问题汇总：AI批改 / 分数识别 / 答题卡 分tab
+  const causeHtml = buildReportCauseTabs();
+
+  const styles = Array.from(document.querySelectorAll('style')).map(s => s.outerHTML).join('\n');
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const linkPeriod = (document.getElementById('linkPeriod').value || '').trim();
+  const linkCard = (document.getElementById('linkCard').value || '').trim();
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>批改评测周报 ${dateStr}</title>
+${styles}
+<style>
+  body { background: white; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .rpt-section { margin-bottom: 32px; }
+  .rpt-title { font-size: 20px; font-weight: 700; color: #1e3a8a; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 3px solid #1a56db; }
+  .cause-btn, .cause-menu, .star-btn { display: none !important; }
+  .rpt-tabs { display: flex; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 16px; }
+  .rpt-tab { padding: 8px 18px; cursor: pointer; font-size: 14px; font-weight: 500; color: #6b7280; border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: none; }
+  .rpt-tab.active { color: #1a56db; background: white; border-color: #e5e7eb; border-bottom-color: white; margin-bottom: -2px; }
+  .rpt-tab-content { display: none; }
+  .rpt-tab-content.active { display: block; }
+  .star-mark { color: #f59e0b; font-weight: 700; font-size: 14px; }
+</style>
+<script>
+function rptSwitchTab(n, group) {
+  document.querySelectorAll('.rpt-tab[data-group="'+group+'"]').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('.rpt-tab-content[data-group="'+group+'"]').forEach((t,i) => t.classList.toggle('active', i===n));
+}
+<\/script>
+</head>
+<body>
+  <div style="text-align:center;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1a56db">
+    <div style="font-size:28px;font-weight:700;color:#1e3a8a;margin-bottom:8px">批改评测周报</div>
+    <div style="font-size:15px;color:#6b7280">日期：${dateStr}</div>
+    ${linkPeriod || linkCard ? `<div style="margin-top:12px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:13px">
+      ${linkPeriod ? `<a href="${linkPeriod}" target="_blank" style="color:#1a56db;text-decoration:none">📊 周期数据统计详情</a>` : ''}
+      ${linkCard ? `<a href="${linkCard}" target="_blank" style="color:#1a56db;text-decoration:none">📋 答题卡数据统计详情</a>` : ''}
+    </div>` : ''}
+  </div>
+  <div class="rpt-section">
+    <div class="rpt-title">满足率汇总</div>
+    ${tab0Html}
+  </div>
+  <div class="rpt-section">
+    <div class="rpt-title">本周不达标题型</div>
+    ${failHtml}
+  </div>
+  <div class="rpt-section">
+    <div class="rpt-title">本周问题汇总</div>
+    ${causeHtml}
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `批改评测周报_${dateStr}.html`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+</script>
+</body>
+</html>

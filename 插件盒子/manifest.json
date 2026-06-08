@@ -2,7 +2,13 @@
   "manifest_version": 3,
   "name": "插件盒子",
   "version": "1.0.0",
-  "description": "链接、图片下载、评测助手统一入口。",
+  "description": "链接、顺序下载（线上作业）、评测助手统一入口。",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
     "downloads",
     "storage",
@@ -27,13 +33,29 @@
     }
   ],
   "action": {
-    "default_title": "打开插件盒子"
+    "default_title": "打开插件盒子",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "sandbox": {
+    "pages": [
+      "weekly_report.html"
+    ]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
   },
   "web_accessible_resources": [
     {
       "resources": [
         "link_tool.html",
-        "link_tool.js"
+        "link_tool.js",
+        "weekly_report.html"
       ],
       "matches": [
         "<all_urls>"

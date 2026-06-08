@@ -1,2 +1,7 @@
 .DS_Store
 **/.DS_Store
+
+# 仓库首页不要 README；唯一 README 保留在 插件盒子/README.md
+[Rr][Ee][Aa][Dd][Mm][Ee].md
+[Rr][Ee][Aa][Dd][Mm][Ee].pdf
+!插件盒子/README.md
