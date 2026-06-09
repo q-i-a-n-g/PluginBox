@@ -1,5 +1,10 @@
 const statusEl = document.getElementById("status");
 
+document.querySelector("[data-help]").addEventListener("click", async () => {
+  await chrome.tabs.create({ url: chrome.runtime.getURL("README.pdf") });
+  window.close();
+});
+
 document.querySelectorAll("[data-tool]").forEach((button) => {
   button.addEventListener("click", () => openTool(button.dataset.tool));
 });

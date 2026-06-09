@@ -55,7 +55,8 @@
       "resources": [
         "link_tool.html",
         "link_tool.js",
-        "weekly_report.html"
+        "weekly_report.html",
+        "README.pdf"
       ],
       "matches": [
         "<all_urls>"

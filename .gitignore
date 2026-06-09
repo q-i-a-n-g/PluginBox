@@ -1,7 +1,10 @@
 .DS_Store
 **/.DS_Store
 
-# 仓库首页不要 README；唯一 README 保留在 插件盒子/README.md
-[Rr][Ee][Aa][Dd][Mm][Ee].md
-[Rr][Ee][Aa][Dd][Mm][Ee].pdf
-!插件盒子/README.md
+# 仓库首页不要 README；子文件夹 README 保留
+/[Rr][Ee][Aa][Dd][Mm][Ee].md
+/[Rr][Ee][Aa][Dd][Mm][Ee].pdf
+
+# 本地离线页面，不同步到 GitHub
+小猿家/小猿家 Eval.htm
+小猿家/小猿家 Eval_files/

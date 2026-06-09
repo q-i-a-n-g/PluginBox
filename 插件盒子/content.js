@@ -157,12 +157,33 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
         padding: 18px 20px 8px;
       }
       .ptb-title {
         font-size: 18px;
         font-weight: 700;
         color: #f8fafc;
+      }
+      .ptb-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .ptb-help-btn {
+        min-height: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #dbeafe;
+        cursor: pointer;
+        padding: 0 9px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .ptb-help-btn:hover,
+      .ptb-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
       }
       .ptb-icon-btn {
         width: 30px;
@@ -207,29 +228,29 @@
       }
       .ptb-tool-card {
         min-width: 0;
-        height: 96px;
+        height: 82px;
         border: 0;
         border-radius: 14px;
         background: transparent;
         color: #e5e7eb;
         cursor: pointer;
         display: grid;
-        grid-template-rows: 46px 34px;
+        grid-template-rows: 32px 34px;
         place-items: center;
         align-content: center;
-        gap: 8px;
+        gap: 7px;
       }
       .ptb-tool-card:hover {
         background: rgba(255, 255, 255, 0.06);
       }
       .ptb-tool-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
         display: grid;
         place-items: center;
         color: #fff;
-        font-size: 24px;
+        font-size: 16px;
         font-weight: 800;
         box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
       }
@@ -468,7 +489,8 @@
     return `
       <div class="ptb-head">
         <div class="ptb-title">插件盒子</div>
-        <div>
+        <div class="ptb-head-actions">
+          <button class="ptb-help-btn" type="button" data-ptb-help title="打开帮助">⍰ 帮助</button>
           <button class="ptb-icon-btn" type="button" data-ptb-hide title="隐藏">x</button>
         </div>
       </div>
@@ -513,6 +535,10 @@
   }
 
   function bindShellEvents() {
+    panel.querySelector("[data-ptb-help]").addEventListener("click", () => {
+      window.open(chrome.runtime.getURL("README.pdf"), "_blank", "noopener");
+      hideMainPanel();
+    });
     panel.querySelector("[data-ptb-hide]").addEventListener("click", () => {
       root.classList.add("ptb-hidden");
       panel.classList.remove("ptb-panel-open");
