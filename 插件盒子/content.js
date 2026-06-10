@@ -145,7 +145,7 @@
         width: min(360px, calc(100vw - 96px));
         max-height: min(760px, calc(100vh - 32px));
         overflow: hidden;
-        border-radius: 26px;
+        border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: #1b1d20;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
@@ -490,7 +490,7 @@
       <div class="ptb-head">
         <div class="ptb-title">插件盒子</div>
         <div class="ptb-head-actions">
-          <button class="ptb-help-btn" type="button" data-ptb-help title="打开帮助">⍰ 帮助</button>
+          <button class="ptb-help-btn" type="button" data-ptb-help title="打开帮助">帮助</button>
           <button class="ptb-icon-btn" type="button" data-ptb-hide title="隐藏">x</button>
         </div>
       </div>
