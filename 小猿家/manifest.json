@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "小猿家评测助手",
+  "version": "1.0.0",
+  "description": "在小猿家 Eval 页面一键填写参考答案、漏空数、小空选项和漏题数。",
+  "permissions": [
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://eval.yuanfudao.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://eval.yuanfudao.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "呼出小猿家评测助手"
+  }
+}
