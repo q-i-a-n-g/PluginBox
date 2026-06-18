@@ -38,6 +38,7 @@
   let root;
   let panel;
   let pageButton;
+  let pageButtonResetTimer = 0;
   let evalButton;
   let evalPanel;
   let currentConfig = { ...DEFAULT_CONFIG };
@@ -587,37 +588,74 @@
 
   async function startPageDownloadFromFloat() {
     if (pageButton.disabled) return;
+    clearPageButtonFeedback();
     pageButton.disabled = true;
     pageButton.textContent = "提取中";
-    showToast("正在提取当前页图片...", "info");
+    let feedback = "";
+    let feedbackTitle = "";
     try {
       const result = await extractOrderedImagesFromPage();
       if (!result.ok) {
-        showToast(result.error || "提取失败。", "error");
+        feedback = "未提取";
+        feedbackTitle = result.error || "提取失败。";
         return;
       }
       pageButton.textContent = "下载中";
-      await sendDownload(result.items, null);
+      const response = await sendDownload(result.items, null, { quiet: true });
+      if (!response?.ok) {
+        throw new Error(response?.error || "下载失败。");
+      }
+      feedback = response.failCount ? "部分完成" : "已完成";
+      feedbackTitle = response.failCount
+        ? `已完成 ${response.successCount} 个下载，失败 ${response.failCount} 张。`
+        : `已开始 ${response.successCount} 个下载。`;
     } catch (error) {
-      showToast(error?.message || "操作失败。", "error");
+      feedback = "失败";
+      feedbackTitle = error?.message || "操作失败。";
     } finally {
       pageButton.disabled = false;
-      pageButton.textContent = "下载";
+      showPageButtonFeedback(feedback || "下载", feedbackTitle);
     }
   }
 
-  async function sendDownload(items, statusId) {
-    reportStatus(statusId, `开始下载 ${items.length} 张图片...`, "info");
+  async function sendDownload(items, statusId, options = {}) {
+    if (!options.quiet) {
+      reportStatus(statusId, `开始下载 ${items.length} 张图片...`, "info");
+    }
     const response = await chrome.runtime.sendMessage({
       type: "TOOLBOX_DOWNLOAD_LINKS",
       items
     });
     if (!response?.ok) {
-      reportStatus(statusId, response?.error || "下载失败。", "error");
-      return;
+      if (!options.quiet) {
+        reportStatus(statusId, response?.error || "下载失败。", "error");
+      }
+      return response;
     }
     const tail = response.failCount ? `，失败 ${response.failCount} 张` : "";
-    reportStatus(statusId, `已完成 ${response.successCount} 个下载${tail}。`, "success");
+    if (!options.quiet) {
+      reportStatus(statusId, `已完成 ${response.successCount} 个下载${tail}。`, "success");
+    }
+    return response;
+  }
+
+  function clearPageButtonFeedback() {
+    if (pageButtonResetTimer) {
+      window.clearTimeout(pageButtonResetTimer);
+      pageButtonResetTimer = 0;
+    }
+    pageButton.title = "顺序下载（线上作业）";
+  }
+
+  function showPageButtonFeedback(text, title) {
+    pageButton.textContent = text;
+    pageButton.title = title || "顺序下载（线上作业）";
+    if (text === "下载") return;
+    pageButtonResetTimer = window.setTimeout(() => {
+      pageButton.textContent = "下载";
+      pageButton.title = "顺序下载（线上作业）";
+      pageButtonResetTimer = 0;
+    }, 1800);
   }
 
   function isUsefulImageUrl(url) {
