@@ -1,0 +1,7 @@
+1. 要求插件盒子中的周报工具跟这个原版的功能完全一样：
+    /Users/neirong/Desktop/chrome插件/周报工具/周报工具.html
+    但原版的可点击打开这个链接：
+    https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/holepage/66424/480276/1?questionId=68567708&childQuestionId=-1&subItemId=-1
+    插件盒子中的周报工具不行，会卡住、刷新也没用，但复制它的链接到新标签页却能打开；
+    测试文件：/Users/neirong/Desktop/test下的4个表格；查找原因并修复
+2. 不同步至GitHub
