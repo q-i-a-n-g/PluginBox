@@ -7,6 +7,7 @@
   const ROOT_ID = "__plugin_toolbox_root";
   const STORAGE_KEY = "plugin_toolbox_eval_config_v1";
   const UI_STATE_KEY = "plugin_toolbox_ui_state_v1";
+  const OCR_VISIBILITY_MESSAGE = "TOOLBOX_SET_OCR_VISIBILITY";
   const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)(?:[?#].*)?$/i;
   const CORRECT_VIEW_PREFIX = "https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/homework-correct-viewing/";
 
@@ -31,7 +32,8 @@
   const DEFAULT_UI_STATE = {
     tools: {
       images: false,
-      eval: false
+      eval: false,
+      ocr: false
     }
   };
 
@@ -53,7 +55,7 @@
     if (message?.type === "TOOLBOX_TOGGLE_TOOL") {
       (async () => {
         try {
-          if (!["images", "eval"].includes(message.tool)) {
+          if (!["images", "eval", "ocr"].includes(message.tool)) {
             throw new Error("未知工具。");
           }
           await ensureUI();
@@ -109,7 +111,7 @@
     bindFloatingEvents();
     bindEvalEvents();
     renderEvalConfig();
-    applyToolVisibility();
+    await applyToolVisibility();
   }
 
   function createFloatingButton(id, text, title) {
@@ -263,6 +265,9 @@
       }
       .ptb-tool-icon.eval {
         background: linear-gradient(135deg, #f43f5e, #8b5cf6);
+      }
+      .ptb-tool-icon.ocr {
+        background: linear-gradient(135deg, #2563eb 0%, #facc15 50%, #06b6d4 100%);
       }
       .ptb-tool-icon.weekly {
         background: linear-gradient(135deg, #f59e0b, #16a34a);
@@ -513,6 +518,10 @@
             <span class="ptb-tool-icon weekly">W</span>
             <span class="ptb-tool-name">周报工具</span>
           </button>
+          <button class="ptb-tool-card" type="button" data-ptb-tool="ocr">
+            <span class="ptb-tool-icon ocr">Z</span>
+            <span class="ptb-tool-name">字框标注</span>
+          </button>
         </div>
       </div>
     `;
@@ -545,7 +554,13 @@
       panel.classList.remove("ptb-panel-open");
     });
     panel.querySelectorAll("[data-ptb-tool]").forEach((tool) => {
-      tool.addEventListener("click", () => openTool(tool.dataset.ptbTool));
+      tool.addEventListener("click", async () => {
+        try {
+          await openTool(tool.dataset.ptbTool);
+        } catch (error) {
+          showToast(error?.message || "无法呼出工具。", "error");
+        }
+      });
     });
     evalPanel.querySelector("[data-ptb-eval-close]").addEventListener("click", () => {
       evalPanel.classList.add("ptb-float-hidden");
@@ -570,6 +585,11 @@
     }
     if (name === "eval") {
       await setToolVisible("eval", !uiState.tools.eval);
+      hideMainPanel();
+      return;
+    }
+    if (name === "ocr") {
+      await setToolVisible("ocr", !uiState.tools.ocr);
       hideMainPanel();
     }
   }
@@ -829,16 +849,38 @@
   }
 
   async function setToolVisible(name, visible) {
+    const previous = uiState.tools[name];
     uiState.tools[name] = visible;
-    applyToolVisibility();
-    await saveUiState();
+    try {
+      await applyToolVisibility({ strictOcr: name === "ocr" && visible });
+      await saveUiState();
+    } catch (error) {
+      uiState.tools[name] = previous;
+      await applyToolVisibility();
+      throw error;
+    }
   }
 
-  function applyToolVisibility() {
+  async function applyToolVisibility(options = {}) {
     pageButton.classList.toggle("ptb-float-hidden", !uiState.tools.images);
     evalButton.classList.toggle("ptb-float-hidden", !uiState.tools.eval);
     if (!uiState.tools.eval) {
       evalPanel.classList.add("ptb-float-hidden");
+    }
+    const response = await setOcrVisibility(uiState.tools.ocr);
+    if (options.strictOcr && !response?.ok) {
+      throw new Error(response?.error || "当前页面不支持字框标注。");
+    }
+  }
+
+  async function setOcrVisibility(visible) {
+    try {
+      return await chrome.runtime.sendMessage({
+        type: OCR_VISIBILITY_MESSAGE,
+        visible: Boolean(visible)
+      });
+    } catch (error) {
+      return { ok: false, error: error?.message || "字框标注模块未响应。" };
     }
   }
 

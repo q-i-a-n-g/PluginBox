@@ -1,4 +1,7 @@
 let isDownloading = false;
+const OCR_SAMPLE_ORIGIN = "https://metis-aione-test.zhenguanyu.com";
+const OCR_SAMPLE_PATH_PREFIX = "/metis-aione-eval/samples/";
+const OCR_VISIBILITY_MESSAGE = "ocr-box-helper-visibility";
 
 chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return;
@@ -22,7 +25,7 @@ function toggleToolbox(tabId) {
   );
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) {
     return false;
   }
@@ -39,8 +42,87 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "TOOLBOX_SET_OCR_VISIBILITY") {
+    (async () => {
+      try {
+        const result = await setOcrToolVisibility(
+          sender.tab,
+          Boolean(message.visible)
+        );
+        sendResponse(result);
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          error: error?.message || "无法呼出字框标注。"
+        });
+      }
+    })();
+    return true;
+  }
+
   return false;
 });
+
+function isSupportedOcrPage(url) {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.origin === OCR_SAMPLE_ORIGIN &&
+      parsed.pathname.startsWith(OCR_SAMPLE_PATH_PREFIX)
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
+function sendOcrVisibilityMessage(tabId, action, visible) {
+  return chrome.tabs.sendMessage(tabId, {
+    type: OCR_VISIBILITY_MESSAGE,
+    action,
+    ...(typeof visible === "boolean" ? { visible } : {})
+  });
+}
+
+async function injectOcrTool(tabId) {
+  await chrome.scripting.insertCSS({
+    target: { tabId },
+    files: ["ocr_box_tool.css"]
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["ocr_box_core.js"]
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["ocr_box_tool.js"]
+  });
+}
+
+async function setOcrToolVisibility(tab, visible) {
+  if (!tab?.id || !isSupportedOcrPage(tab.url)) {
+    return {
+      ok: false,
+      error: "字框标注仅支持算法评测系统的作文正文单字框样本页。"
+    };
+  }
+
+  let current;
+  try {
+    current = await sendOcrVisibilityMessage(tab.id, "get");
+  } catch (_error) {
+    current = null;
+  }
+
+  if (!current || typeof current.visible !== "boolean") {
+    await injectOcrTool(tab.id);
+  }
+
+  const result = await sendOcrVisibilityMessage(tab.id, "set", visible);
+  return {
+    ok: true,
+    visible: result?.visible ?? visible
+  };
+}
 
 async function downloadLinks(rawItems, taskId) {
   if (isDownloading) {

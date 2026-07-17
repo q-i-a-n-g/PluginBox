@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "字框标注助手",
+  "version": "1.8.0",
+  "description": "为作文正文单字框 OCR 标注页面提供单击画框、标点跳过和批量删除草稿。",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "显示或隐藏字框标注助手"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://metis-aione-test.zhenguanyu.com/metis-aione-eval/samples/*"
+      ],
+      "js": [
+        "core.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

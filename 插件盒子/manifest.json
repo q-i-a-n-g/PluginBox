@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "插件盒子",
-  "version": "1.0.0",
-  "description": "链接、顺序下载（线上作业）、评测助手统一入口。",
+  "version": "1.1.0",
+  "description": "链接、顺序下载、评测、字框标注和周报工具统一入口。",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -28,6 +28,19 @@
       ],
       "js": [
         "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://metis-aione-test.zhenguanyu.com/metis-aione-eval/samples/*"
+      ],
+      "js": [
+        "ocr_box_core.js",
+        "ocr_box_tool.js"
+      ],
+      "css": [
+        "ocr_box_tool.css"
       ],
       "run_at": "document_idle"
     }
