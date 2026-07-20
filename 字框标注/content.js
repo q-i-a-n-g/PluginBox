@@ -71,6 +71,7 @@
     clearToken: null,
     clearToastTimer: null,
     collapsed: false,
+    advancedExpanded: false,
     statusText: "正在连接标注页面…",
     statusTone: "info",
     availabilityKey: "",
@@ -133,7 +134,6 @@
         <header class="ocr-box-helper__header">
           <h2 class="ocr-box-helper__title">字框标注助手</h2>
           <div class="ocr-box-helper__header-actions">
-            <span class="ocr-box-helper__draft-badge">只改未保存草稿</span>
             <button class="ocr-box-helper__collapse" type="button" data-action="collapse" aria-expanded="true">收起</button>
           </div>
         </header>
@@ -141,8 +141,7 @@
           <section>
             <span class="ocr-box-helper__label">绘框模式</span>
             <div class="ocr-box-helper__modes" role="group" aria-label="绘框模式">
-              <button class="ocr-box-helper__mode" type="button" data-mode="single-fixed">单击画框</button>
-              <button class="ocr-box-helper__mode" type="button" data-mode="native">暂停助手</button>
+              <button class="ocr-box-helper__mode" type="button" data-action="toggle-mode">单击画框</button>
             </div>
           </section>
 
@@ -155,15 +154,18 @@
             </div>
           </section>
 
-          <label class="ocr-box-helper__switch-row">
-            <span>成框后跳过标点并自动选字</span>
-            <input class="ocr-box-helper__switch" data-action="auto-advance" type="checkbox">
-          </label>
+          <button class="ocr-box-helper__advanced-toggle" type="button" data-action="toggle-advanced">▶ 高级选项</button>
+          <div class="ocr-box-helper__advanced-content" data-expanded="false">
+            <label class="ocr-box-helper__switch-row">
+              <span>成框后跳过标点并自动选字</span>
+              <input class="ocr-box-helper__switch" data-action="auto-advance" type="checkbox">
+            </label>
 
-          <label class="ocr-box-helper__switch-row">
-            <span>反向标注（成框后选择上一字）</span>
-            <input class="ocr-box-helper__switch" data-action="reverse-advance" type="checkbox">
-          </label>
+            <label class="ocr-box-helper__switch-row">
+              <span>反向标注（成框后选择上一字）</span>
+              <input class="ocr-box-helper__switch" data-action="reverse-advance" type="checkbox">
+            </label>
+          </div>
 
           <div class="ocr-box-helper__delete-actions">
             <button class="ocr-box-helper__button ocr-box-helper__batch-delete" type="button" data-action="delete-five" aria-label="从当前字符开始连续删除五个字框">连续删除 5 个</button>
@@ -171,7 +173,6 @@
           </div>
 
           <div class="ocr-box-helper__status" data-role="status" data-tone="info" role="status" aria-live="polite"></div>
-          <p class="ocr-box-helper__hint">永久写回仍需点击页面原有的“保存标注”。</p>
         </div>
       </div>
     `;
@@ -179,10 +180,12 @@
     document.body.appendChild(root);
     ensureClearToast();
     state.root = root;
-    ui.modeButtons = Array.from(root.querySelectorAll("[data-mode]"));
+    ui.toggleModeButton = root.querySelector('[data-action="toggle-mode"]');
     ui.shrinkSizeButton = root.querySelector('[data-action="shrink-size"]');
     ui.enlargeSizeButton = root.querySelector('[data-action="enlarge-size"]');
     ui.fixedSize = root.querySelector('[data-role="fixed-size"]');
+    ui.advancedToggle = root.querySelector('[data-action="toggle-advanced"]');
+    ui.advancedContent = root.querySelector('.ocr-box-helper__advanced-content');
     ui.autoAdvance = root.querySelector('[data-action="auto-advance"]');
     ui.reverseAdvance = root.querySelector('[data-action="reverse-advance"]');
     ui.deleteFiveButton = root.querySelector('[data-action="delete-five"]');
@@ -190,11 +193,16 @@
     ui.status = root.querySelector('[data-role="status"]');
     ui.collapseButton = root.querySelector('[data-action="collapse"]');
 
-    ui.modeButtons.forEach((button) => {
-      button.addEventListener("click", () => changeMode(button.dataset.mode));
+    ui.toggleModeButton.addEventListener("click", () => {
+      const nextMode = state.settings.drawMode === "single-fixed" ? "native" : "single-fixed";
+      changeMode(nextMode);
     });
     ui.shrinkSizeButton.addEventListener("click", () => changeFixedScale(-10));
     ui.enlargeSizeButton.addEventListener("click", () => changeFixedScale(10));
+    ui.advancedToggle.addEventListener("click", () => {
+      state.advancedExpanded = !state.advancedExpanded;
+      renderToolbar();
+    });
     ui.autoAdvance.addEventListener("change", async () => {
       state.settings.autoAdvance = ui.autoAdvance.checked;
       await storageSet({ autoAdvance: state.settings.autoAdvance });
@@ -309,17 +317,21 @@
     state.root.dataset.collapsed = String(state.collapsed);
     ui.collapseButton.textContent = state.collapsed ? "展开" : "收起";
     ui.collapseButton.setAttribute("aria-expanded", String(!state.collapsed));
-    ui.modeButtons.forEach((button) => {
-      const active = button.dataset.mode === mode;
-      button.setAttribute("aria-pressed", String(active));
-      button.disabled = state.busy;
-    });
+
+    const isActive = mode === "single-fixed";
+    ui.toggleModeButton.textContent = isActive ? "暂停助手" : "单击画框";
+    ui.toggleModeButton.setAttribute("aria-pressed", String(isActive));
+    ui.toggleModeButton.disabled = state.busy;
 
     const size = getFixedSize();
     ui.fixedSize.textContent = `${size.width} × ${size.height} · ${size.scalePercent}%`;
     const sizeDisabled = state.busy || mode !== "single-fixed";
     ui.shrinkSizeButton.disabled = sizeDisabled || size.scalePercent <= 40;
     ui.enlargeSizeButton.disabled = sizeDisabled || size.scalePercent >= 300;
+
+    ui.advancedToggle.textContent = state.advancedExpanded ? "\u25BC 高级选项" : "\u25B6 高级选项";
+    ui.advancedContent.dataset.expanded = String(state.advancedExpanded);
+
     ui.autoAdvance.checked = state.settings.autoAdvance;
     ui.autoAdvance.disabled = state.busy;
     ui.reverseAdvance.checked = state.settings.reverseAdvance;
