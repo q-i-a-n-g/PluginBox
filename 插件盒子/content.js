@@ -7,9 +7,11 @@
   const ROOT_ID = "__plugin_toolbox_root";
   const STORAGE_KEY = "plugin_toolbox_eval_config_v1";
   const UI_STATE_KEY = "plugin_toolbox_ui_state_v1";
+  const UI_STATE_SCHEMA_VERSION = 2;
   const OCR_VISIBILITY_MESSAGE = "TOOLBOX_SET_OCR_VISIBILITY";
   const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)(?:[?#].*)?$/i;
-  const CORRECT_VIEW_PREFIX = "https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/homework-correct-viewing/";
+  const siteRules = globalThis.PluginToolboxSiteRules;
+  if (!siteRules) throw new Error("插件盒子站点规则未加载");
 
   const DEFAULT_CONFIG = {
     result: true,
@@ -30,9 +32,10 @@
     questionValue: "对"
   };
   const DEFAULT_UI_STATE = {
+    schemaVersion: UI_STATE_SCHEMA_VERSION,
     tools: {
-      images: false,
-      eval: false,
+      images: true,
+      eval: true,
       ocr: false
     }
   };
@@ -43,6 +46,8 @@
   let pageButtonResetTimer = 0;
   let evalButton;
   let evalPanel;
+  let lastRouteSignature = "";
+  let routeSyncing = false;
   let currentConfig = { ...DEFAULT_CONFIG };
   let uiState = structuredClone(DEFAULT_UI_STATE);
 
@@ -111,6 +116,7 @@
     bindFloatingEvents();
     bindEvalEvents();
     renderEvalConfig();
+    updateToolAvailability();
     await applyToolVisibility();
   }
 
@@ -245,6 +251,13 @@
       }
       .ptb-tool-card:hover {
         background: rgba(255, 255, 255, 0.06);
+      }
+      .ptb-tool-card:disabled {
+        cursor: not-allowed;
+        opacity: 0.42;
+      }
+      .ptb-tool-card:disabled:hover {
+        background: transparent;
       }
       .ptb-tool-icon {
         width: 32px;
@@ -504,7 +517,7 @@
         <div class="ptb-app-grid">
           <button class="ptb-tool-card" type="button" data-ptb-tool="links">
             <span class="ptb-tool-icon links">L</span>
-            <span class="ptb-tool-name">链接<br>提取/预览/下载</span>
+            <span class="ptb-tool-name">链接<br>预览/下载</span>
           </button>
           <button class="ptb-tool-card" type="button" data-ptb-tool="images">
             <span class="ptb-tool-icon images">↓</span>
@@ -597,6 +610,17 @@
   function hideMainPanel() {
     root.classList.add("ptb-hidden");
     panel.classList.remove("ptb-panel-open");
+  }
+
+  function updateToolAvailability() {
+    if (!panel) return;
+    for (const name of ["images", "eval"]) {
+      const button = panel.querySelector(`[data-ptb-tool="${name}"]`);
+      if (!button) continue;
+      const supported = siteRules.isToolSupported(name, location.href);
+      button.disabled = !supported;
+      button.title = supported ? "" : siteRules.unavailableMessage(name);
+    }
   }
 
   function bindFloatingEvents() {
@@ -834,14 +858,27 @@
 
   async function loadUiState() {
     const data = await chrome.storage.local.get(UI_STATE_KEY);
+    const stored = data[UI_STATE_KEY] || {};
+    const storedTools = stored.tools || {};
+    const currentSchema = stored.schemaVersion === UI_STATE_SCHEMA_VERSION;
     uiState = {
-      ...DEFAULT_UI_STATE,
-      ...(data[UI_STATE_KEY] || {}),
+      schemaVersion: UI_STATE_SCHEMA_VERSION,
       tools: {
-        ...DEFAULT_UI_STATE.tools,
-        ...((data[UI_STATE_KEY] || {}).tools || {})
+        images:
+          currentSchema && typeof storedTools.images === "boolean"
+            ? storedTools.images
+            : DEFAULT_UI_STATE.tools.images,
+        eval:
+          currentSchema && typeof storedTools.eval === "boolean"
+            ? storedTools.eval
+            : DEFAULT_UI_STATE.tools.eval,
+        ocr:
+          typeof storedTools.ocr === "boolean"
+            ? storedTools.ocr
+            : DEFAULT_UI_STATE.tools.ocr
       }
     };
+    if (!currentSchema) await saveUiState();
   }
 
   async function saveUiState() {
@@ -849,6 +886,9 @@
   }
 
   async function setToolVisible(name, visible) {
+    if (visible && !siteRules.isToolSupported(name, location.href)) {
+      throw new Error(siteRules.unavailableMessage(name));
+    }
     const previous = uiState.tools[name];
     uiState.tools[name] = visible;
     try {
@@ -862,9 +902,13 @@
   }
 
   async function applyToolVisibility(options = {}) {
-    pageButton.classList.toggle("ptb-float-hidden", !uiState.tools.images);
-    evalButton.classList.toggle("ptb-float-hidden", !uiState.tools.eval);
-    if (!uiState.tools.eval) {
+    const showImages =
+      uiState.tools.images && siteRules.isSequenceDownloadPage(location.href);
+    const showEval =
+      uiState.tools.eval && siteRules.isEvaluationPage(location.href);
+    pageButton.classList.toggle("ptb-float-hidden", !showImages);
+    evalButton.classList.toggle("ptb-float-hidden", !showEval);
+    if (!showEval) {
       evalPanel.classList.add("ptb-float-hidden");
     }
     const response = await setOcrVisibility(uiState.tools.ocr);
@@ -886,11 +930,47 @@
 
   async function restorePersistedTools() {
     await loadUiState();
-    if (Object.values(uiState.tools).some(Boolean)) {
+    if (
+      siteRules.isSequenceDownloadPage(location.href) ||
+      siteRules.isEvaluationPage(location.href) ||
+      uiState.tools.ocr
+    ) {
       await ensureUI();
       root.classList.add("ptb-hidden");
       panel.classList.remove("ptb-panel-open");
     }
+  }
+
+  async function syncRouteToolVisibility() {
+    if (routeSyncing) return;
+    const routeSignature = `${siteRules.isSequenceDownloadPage(location.href)}:${siteRules.isEvaluationPage(location.href)}`;
+    if (routeSignature === lastRouteSignature) return;
+    routeSyncing = true;
+    lastRouteSignature = routeSignature;
+    try {
+      if (
+        !root &&
+        (siteRules.isSequenceDownloadPage(location.href) ||
+          siteRules.isEvaluationPage(location.href))
+      ) {
+        await ensureUI();
+      }
+      if (root) {
+        updateToolAvailability();
+        await applyToolVisibility();
+      }
+    } finally {
+      routeSyncing = false;
+    }
+  }
+
+  async function initializeAutomaticTools() {
+    await restorePersistedTools();
+    await syncRouteToolVisibility();
+    if (!siteRules.isRelevantHost(location.href)) return;
+    window.addEventListener("hashchange", () => void syncRouteToolVisibility());
+    window.addEventListener("popstate", () => void syncRouteToolVisibility());
+    window.setInterval(() => void syncRouteToolVisibility(), 1500);
   }
 
   async function extractOrderedImagesFromPage() {
@@ -976,7 +1056,7 @@
 
     async function getItemsFromApi() {
       const context = parseContextFromHash();
-      if (!context || !location.href.startsWith(CORRECT_VIEW_PREFIX)) {
+      if (!context || !siteRules.isSequenceDownloadPage(location.href)) {
         return [];
       }
       const apiUrl = `/metis-gnosis-evaluation/api/internal/homework/background/v2/${encodeURIComponent(
@@ -1241,5 +1321,7 @@
     showToast(`评测完成：更改 ${totalChanged} 项。`, "success");
   }
 
-  restorePersistedTools();
+  initializeAutomaticTools().catch((error) => {
+    console.warn("[插件盒子] 自动呼出工具失败", error);
+  });
 })();

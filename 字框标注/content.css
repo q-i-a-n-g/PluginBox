@@ -201,8 +201,12 @@
 
 .ocr-box-helper__delete-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
+}
+
+.ocr-box-helper__delete-actions .ocr-box-helper__button {
+  padding-inline: 4px;
 }
 
 .ocr-box-helper__batch-delete {
@@ -216,6 +220,19 @@
   border-color: #2563eb;
   background: #dbeafe;
   color: #1e40af;
+}
+
+.ocr-box-helper__punctuation-delete {
+  width: 100%;
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.ocr-box-helper__punctuation-delete:hover:not(:disabled) {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #78350f;
 }
 
 .ocr-box-helper__danger:hover:not(:disabled) {

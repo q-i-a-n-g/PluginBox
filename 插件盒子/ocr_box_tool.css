@@ -1,10 +1,10 @@
-#ptb-ocr-box-helper-root {
+#ocr-box-helper-root {
   all: initial;
   position: fixed;
-  top: 10vh;
-  right: 95px;
+  top: 16px;
+  right: 16px;
   z-index: 2147483646;
-  width: min(326px, calc(100vw - 108px));
+  width: 326px;
   color: #e5e7eb;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -12,12 +12,12 @@
   line-height: 1.45;
 }
 
-#ptb-ocr-box-helper-root,
-#ptb-ocr-box-helper-root * {
+#ocr-box-helper-root,
+#ocr-box-helper-root * {
   box-sizing: border-box;
 }
 
-#ptb-ocr-box-helper-root[data-interface-visible="false"] {
+#ocr-box-helper-root[data-interface-visible="false"] {
   display: none;
 }
 
@@ -54,15 +54,6 @@
   letter-spacing: 0;
 }
 
-.ocr-box-helper__draft-badge {
-  flex: none;
-  padding: 2px 7px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  color: #aab4c3;
-  font-size: 11px;
-}
-
 .ocr-box-helper__collapse {
   appearance: none;
   min-height: 26px;
@@ -80,13 +71,12 @@
   background: rgba(255, 255, 255, 0.16);
 }
 
-#ptb-ocr-box-helper-root[data-collapsed="true"] {
+#ocr-box-helper-root[data-collapsed="true"] {
   width: auto;
   min-width: 178px;
 }
 
-#ptb-ocr-box-helper-root[data-collapsed="true"] .ocr-box-helper__body,
-#ptb-ocr-box-helper-root[data-collapsed="true"] .ocr-box-helper__draft-badge {
+#ocr-box-helper-root[data-collapsed="true"] .ocr-box-helper__body {
   display: none;
 }
 
@@ -109,7 +99,7 @@
 
 .ocr-box-helper__modes {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 5px;
 }
 
@@ -138,6 +128,11 @@
 .ocr-box-helper__mode:hover:not(:disabled) {
   border-color: #38bdf8;
   color: #bae6fd;
+}
+
+.ocr-box-helper__mode {
+  min-height: 68px;
+  font-size: 15px;
 }
 
 .ocr-box-helper__mode[aria-pressed="true"] {
@@ -206,8 +201,12 @@
 
 .ocr-box-helper__delete-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
+}
+
+.ocr-box-helper__delete-actions .ocr-box-helper__button {
+  padding-inline: 4px;
 }
 
 .ocr-box-helper__batch-delete {
@@ -221,6 +220,19 @@
   border-color: #38bdf8;
   background: rgba(56, 189, 248, 0.2);
   color: #e0f2fe;
+}
+
+.ocr-box-helper__punctuation-delete {
+  width: 100%;
+  border-color: rgba(250, 204, 21, 0.3);
+  background: rgba(250, 204, 21, 0.12);
+  color: #fde68a;
+}
+
+.ocr-box-helper__punctuation-delete:hover:not(:disabled) {
+  border-color: #facc15;
+  background: rgba(250, 204, 21, 0.2);
+  color: #fef3c7;
 }
 
 .ocr-box-helper__danger:hover:not(:disabled) {
@@ -258,7 +270,7 @@
   color: #fca5a5;
 }
 
-#ptb-ocr-box-helper-clear-toast {
+#ocr-box-helper-clear-toast {
   all: initial;
   position: fixed;
   right: 18px;
@@ -282,43 +294,62 @@
   transition: opacity 160ms ease, transform 160ms ease;
 }
 
-#ptb-ocr-box-helper-clear-toast[data-visible="true"] {
+#ocr-box-helper-clear-toast[data-visible="true"] {
   opacity: 1;
   transform: translateY(0);
 }
 
-#ptb-ocr-box-helper-clear-toast[data-tone="success"] {
+#ocr-box-helper-clear-toast[data-tone="success"] {
   border-color: rgba(34, 197, 94, 0.28);
   background: rgba(17, 34, 24, 0.98);
   color: #86efac;
 }
 
-#ptb-ocr-box-helper-clear-toast[data-tone="warning"] {
+#ocr-box-helper-clear-toast[data-tone="warning"] {
   border-color: rgba(250, 204, 21, 0.3);
   background: rgba(35, 31, 16, 0.98);
   color: #fde68a;
 }
 
-#ptb-ocr-box-helper-clear-toast[data-tone="error"] {
+#ocr-box-helper-clear-toast[data-tone="error"] {
   border-color: rgba(248, 113, 113, 0.3);
   background: rgba(40, 20, 22, 0.98);
   color: #fca5a5;
 }
 
-.ocr-box-helper__hint {
-  margin: -3px 0 0;
+.ocr-box-helper__advanced-toggle {
+  appearance: none;
+  border: none;
+  padding: 2px 0;
+  background: none;
   color: #94a3b8;
+  font: inherit;
   font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ocr-box-helper__advanced-toggle:hover {
+  color: #7dd3fc;
+}
+
+.ocr-box-helper__advanced-content {
+  display: grid;
+  gap: 8px;
+}
+
+.ocr-box-helper__advanced-content[data-expanded="false"] {
+  display: none;
 }
 
 @media (max-width: 900px) {
-  #ptb-ocr-box-helper-root {
+  #ocr-box-helper-root {
     top: 8px;
     right: 8px;
     width: min(326px, calc(100vw - 16px));
   }
 
-  #ptb-ocr-box-helper-clear-toast {
+  #ocr-box-helper-clear-toast {
     right: 10px;
     bottom: 10px;
     width: min(360px, calc(100vw - 20px));

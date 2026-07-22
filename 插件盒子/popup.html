@@ -58,6 +58,8 @@
       font: inherit;
     }
     .tool:hover { background: rgba(255,255,255,.07); }
+    .tool:disabled { cursor: not-allowed; opacity: .42; }
+    .tool:disabled:hover { background: transparent; }
     .icon {
       width: 32px;
       height: 32px;
@@ -106,7 +108,7 @@
   <div class="grid">
     <button class="tool" type="button" data-tool="links">
       <span class="icon links">L</span>
-      <span class="name">链接<br>提取/预览/下载</span>
+      <span class="name">链接<br>预览/下载</span>
     </button>
     <button class="tool" type="button" data-tool="images">
       <span class="icon images">↓</span>
@@ -126,6 +128,7 @@
     </button>
   </div>
   <div class="status" id="status"></div>
+  <script src="tool_site_rules.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

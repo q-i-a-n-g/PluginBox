@@ -71,6 +71,24 @@ test("clear-all runs without confirmation and reports through a toast", () => {
   assert.match(source, /showClearToast\(`正在清空：/);
 });
 
+test("punctuation clear deletes every framed Chinese or English punctuation", () => {
+  const source = fs.readFileSync(path.join(extensionRoot, "content.js"), "utf8");
+  const styles = fs.readFileSync(path.join(extensionRoot, "content.css"), "utf8");
+  const deleteFivePosition = source.indexOf('data-action="delete-five"');
+  const punctuationPosition = source.indexOf('data-action="clear-punctuation"');
+  const clearAllPosition = source.indexOf('data-action="clear-all"');
+  assert.ok(
+    deleteFivePosition >= 0 &&
+      deleteFivePosition < punctuationPosition &&
+      punctuationPosition < clearAllPosition,
+  );
+  assert.match(source, /function getFramedPunctuationIndices/);
+  assert.match(source, /core\.isCommonPunctuation\(button\.textContent\.trim\(\)\)/);
+  assert.match(source, /await deleteBoxAtIndex\(targetIndex, list, token\)/);
+  assert.match(source, /正在清空标点：/);
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+});
+
 test("extension action can inject and toggle the helper", () => {
   const background = fs.readFileSync(
     path.join(extensionRoot, "background.js"),
@@ -81,13 +99,13 @@ test("extension action can inject and toggle the helper", () => {
   assert.match(background, /sendVisibilityMessage\(tab\.id, "set", !current\.visible\)/);
 });
 
-test("native pause is the default and two-point mode is removed", () => {
+test("native pause is the default and compact mode toggle is used", () => {
   const source = fs.readFileSync(path.join(extensionRoot, "content.js"), "utf8");
   assert.match(source, /drawMode: "native"/);
   assert.match(source, /SETTINGS_SCHEMA_VERSION = 2/);
-  const pausePosition = source.indexOf('data-mode="native"');
-  const singlePosition = source.indexOf('data-mode="single-fixed"');
-  assert.ok(singlePosition < pausePosition);
+  assert.match(source, /data-action="toggle-mode"/);
+  assert.doesNotMatch(source, /data-mode="single-fixed"/);
+  assert.doesNotMatch(source, /data-mode="native"/);
   assert.doesNotMatch(source, /data-mode="two-point"/);
   assert.doesNotMatch(source, /state\.twoPoint/);
   assert.match(

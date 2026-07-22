@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>链接 提取/预览/下载</title>
+  <title>链接预览/下载</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -30,14 +30,12 @@
     }
     main { max-width: 1120px; margin: 0 auto; }
     h1 { font-size: 2rem; letter-spacing: 0; margin-bottom: 8px; }
-    .sub { color: var(--muted); margin-bottom: 16px; }
     .panel {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
       backdrop-filter: blur(14px);
     }
-    .tip { padding: 14px 16px; color: #cbd5e1; line-height: 1.65; margin-bottom: 16px; }
     .input { padding: 18px; margin-bottom: 18px; }
     .row { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
     label { color: var(--blue); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
@@ -154,19 +152,15 @@
 </head>
 <body>
   <main>
-    <h1>链接 提取/预览/下载</h1>
-    <section class="panel tip">
-      <div>- 粘贴 JSON ，可提取链接/预览/下载图片</div>
-      <div>- 粘贴 多行链接，可预览/下载图片</div>
-    </section>
+    <h1>链接预览/下载</h1>
     <section class="panel input">
       <div class="row">
-        <label for="inputText">输入文本</label>
+        <label for="inputText">图片链接</label>
         <span class="count" id="inputCounter">0 行</span>
       </div>
-      <textarea id="inputText" placeholder="粘贴 JSON 或多行图片链接..."></textarea>
+      <textarea id="inputText" placeholder="每行粘贴一个图片链接..."></textarea>
       <div class="actions">
-        <button class="primary" id="okBtn" type="button">OK</button>
+        <button class="primary" id="previewBtn" type="button">预览</button>
         <button class="download" id="downloadBtn" type="button" disabled>下载</button>
         <button class="export" id="exportBtn" type="button" disabled>导出 Excel</button>
         <button id="clearBtn" type="button">清空</button>

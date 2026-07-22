@@ -10,29 +10,30 @@ const read = (filename) =>
   fs.readFileSync(path.join(extensionRoot, filename), "utf8");
 const manifest = JSON.parse(read("manifest.json"));
 
-test("字框标注资源已加入插件盒子并限制在目标页面", () => {
+test("字框标注资源由插件盒子按需注入", () => {
   const entry = manifest.content_scripts.find((item) =>
     item.js?.includes("ocr_box_tool.js"),
   );
-  assert.ok(entry);
-  assert.deepEqual(entry.matches, [
-    "https://metis-aione-test.zhenguanyu.com/metis-aione-eval/samples/*",
-  ]);
-  assert.deepEqual(entry.js, ["ocr_box_core.js", "ocr_box_tool.js"]);
-  assert.deepEqual(entry.css, ["ocr_box_tool.css"]);
+  assert.equal(entry, undefined);
 
-  for (const asset of [...entry.js, ...entry.css]) {
+  for (const asset of ["ocr_box_core.js", "ocr_box_tool.js", "ocr_box_tool.css"]) {
     assert.equal(fs.existsSync(path.join(extensionRoot, asset)), true, asset);
   }
+
+  const background = read("background.js");
+  assert.match(background, /files: \["ocr_box_tool\.css"\]/);
+  assert.match(background, /files: \["ocr_box_core\.js"\]/);
+  assert.match(background, /files: \["ocr_box_tool\.js"\]/);
 });
 
-test("字框标注默认隐藏并使用独立界面标识", () => {
+test("字框标注使用单独插件的功能标识并保留盒子样式", () => {
   const source = read("ocr_box_tool.js");
   const styles = read("ocr_box_tool.css");
-  assert.match(source, /window\[VISIBILITY_REQUEST_KEY\] === true/);
-  assert.match(source, /ROOT_ID = "ptb-ocr-box-helper-root"/);
-  assert.match(styles, /#ptb-ocr-box-helper-root\[data-interface-visible="false"\]/);
-  assert.doesNotMatch(styles, /^#ocr-box-helper-root\b/m);
+  assert.match(source, /window\[VISIBILITY_REQUEST_KEY\] !== false/);
+  assert.match(source, /ROOT_ID = "ocr-box-helper-root"/);
+  assert.match(source, /TOAST_ID = "ocr-box-helper-clear-toast"/);
+  assert.match(styles, /#ocr-box-helper-root\[data-interface-visible="false"\]/);
+  assert.doesNotMatch(styles, /#ptb-ocr-box-helper-root/);
 });
 
 test("盒子入口可切换字框标注并保存显示状态", () => {
@@ -51,25 +52,31 @@ test("盒子入口可切换字框标注并保存显示状态", () => {
   assert.match(background, /OCR_SAMPLE_PATH_PREFIX/);
 });
 
-test("盒子版保留完整字框功能并按新顺序显示模式", () => {
+test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
   const source = read("ocr_box_tool.js");
-  const singlePosition = source.indexOf('data-mode="single-fixed"');
-  const pausePosition = source.indexOf('data-mode="native"');
-  assert.ok(singlePosition >= 0 && singlePosition < pausePosition);
+  const styles = read("ocr_box_tool.css");
 
   for (const marker of [
+    'data-action="toggle-mode"',
+    'data-action="toggle-advanced"',
     'data-action="shrink-size"',
     'data-action="enlarge-size"',
     'data-action="auto-advance"',
     'data-action="reverse-advance"',
     'data-action="delete-five"',
+    'data-action="clear-punctuation"',
     'data-action="clear-all"',
   ]) {
     assert.match(source, new RegExp(marker));
   }
+  assert.match(source, /advancedExpanded: false/);
+  assert.doesNotMatch(source, /data-mode="single-fixed"/);
+  assert.doesNotMatch(source, /data-mode="native"/);
   assert.match(source, /SINGLE_MODE_IDLE_MS = 5000/);
   assert.match(source, /core\.findNextContentIndex/);
   assert.match(source, /core\.findPreviousContentIndex/);
+  assert.match(source, /core\.isCommonPunctuation/);
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.doesNotMatch(source, /\bfetch\s*\(/);
   assert.doesNotMatch(source, /\bXMLHttpRequest\b/);
 });

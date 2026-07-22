@@ -1,9 +1,9 @@
 (() => {
   "use strict";
 
-  const ROOT_ID = "ptb-ocr-box-helper-root";
-  const TOAST_ID = "ptb-ocr-box-helper-clear-toast";
-  const VISIBILITY_REQUEST_KEY = "__PLUGIN_TOOLBOX_OCR_REQUESTED_VISIBLE__";
+  const ROOT_ID = "ocr-box-helper-root";
+  const TOAST_ID = "ocr-box-helper-clear-toast";
+  const VISIBILITY_REQUEST_KEY = "__OCR_BOX_HELPER_REQUESTED_VISIBLE__";
   const VISIBILITY_MESSAGE = "ocr-box-helper-visibility";
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -14,7 +14,7 @@
         ready: Boolean(root),
         visible: root
           ? root.dataset.interfaceVisible !== "false"
-          : window[VISIBILITY_REQUEST_KEY] === true,
+          : window[VISIBILITY_REQUEST_KEY] !== false,
       });
       return false;
     }
@@ -35,8 +35,8 @@
     return false;
   });
 
-  if (window.__PLUGIN_TOOLBOX_OCR_BOX_HELPER_ACTIVE__) return;
-  window.__PLUGIN_TOOLBOX_OCR_BOX_HELPER_ACTIVE__ = true;
+  if (window.__OCR_BOX_HELPER_ACTIVE__) return;
+  window.__OCR_BOX_HELPER_ACTIVE__ = true;
 
   const core = globalThis.OCRBoxHelperCore;
   if (!core) throw new Error("字框标注助手核心模块未加载");
@@ -71,6 +71,7 @@
     clearToken: null,
     clearToastTimer: null,
     collapsed: false,
+    advancedExpanded: false,
     statusText: "正在连接标注页面…",
     statusTone: "info",
     availabilityKey: "",
@@ -125,15 +126,14 @@
     const root = document.createElement("section");
     root.id = ROOT_ID;
     root.dataset.interfaceVisible = String(
-      window[VISIBILITY_REQUEST_KEY] === true,
+      window[VISIBILITY_REQUEST_KEY] !== false,
     );
-    root.setAttribute("aria-label", "插件盒子字框标注");
+    root.setAttribute("aria-label", "字框标注助手");
     root.innerHTML = `
       <div class="ocr-box-helper__panel">
         <header class="ocr-box-helper__header">
-          <h2 class="ocr-box-helper__title">字框标注</h2>
+          <h2 class="ocr-box-helper__title">字框标注助手</h2>
           <div class="ocr-box-helper__header-actions">
-            <span class="ocr-box-helper__draft-badge">只改未保存草稿</span>
             <button class="ocr-box-helper__collapse" type="button" data-action="collapse" aria-expanded="true">收起</button>
           </div>
         </header>
@@ -141,8 +141,7 @@
           <section>
             <span class="ocr-box-helper__label">绘框模式</span>
             <div class="ocr-box-helper__modes" role="group" aria-label="绘框模式">
-              <button class="ocr-box-helper__mode" type="button" data-mode="single-fixed">单击画框</button>
-              <button class="ocr-box-helper__mode" type="button" data-mode="native">暂停助手</button>
+              <button class="ocr-box-helper__mode" type="button" data-action="toggle-mode">单击画框</button>
             </div>
           </section>
 
@@ -155,23 +154,26 @@
             </div>
           </section>
 
-          <label class="ocr-box-helper__switch-row">
-            <span>成框后跳过标点并自动选字</span>
-            <input class="ocr-box-helper__switch" data-action="auto-advance" type="checkbox">
-          </label>
+          <button class="ocr-box-helper__advanced-toggle" type="button" data-action="toggle-advanced">▶ 高级选项</button>
+          <div class="ocr-box-helper__advanced-content" data-expanded="false">
+            <label class="ocr-box-helper__switch-row">
+              <span>成框后跳过标点并自动选字</span>
+              <input class="ocr-box-helper__switch" data-action="auto-advance" type="checkbox">
+            </label>
 
-          <label class="ocr-box-helper__switch-row">
-            <span>反向标注（成框后选择上一字）</span>
-            <input class="ocr-box-helper__switch" data-action="reverse-advance" type="checkbox">
-          </label>
+            <label class="ocr-box-helper__switch-row">
+              <span>反向标注（成框后选择上一字）</span>
+              <input class="ocr-box-helper__switch" data-action="reverse-advance" type="checkbox">
+            </label>
+          </div>
 
           <div class="ocr-box-helper__delete-actions">
             <button class="ocr-box-helper__button ocr-box-helper__batch-delete" type="button" data-action="delete-five" aria-label="从当前字符开始连续删除五个字框">连续删除 5 个</button>
+            <button class="ocr-box-helper__button ocr-box-helper__punctuation-delete" type="button" data-action="clear-punctuation">清空标点字框</button>
             <button class="ocr-box-helper__button ocr-box-helper__danger" type="button" data-action="clear-all">清空全部字框</button>
           </div>
 
           <div class="ocr-box-helper__status" data-role="status" data-tone="info" role="status" aria-live="polite"></div>
-          <p class="ocr-box-helper__hint">永久写回仍需点击页面原有的“保存标注”。</p>
         </div>
       </div>
     `;
@@ -179,22 +181,30 @@
     document.body.appendChild(root);
     ensureClearToast();
     state.root = root;
-    ui.modeButtons = Array.from(root.querySelectorAll("[data-mode]"));
+    ui.toggleModeButton = root.querySelector('[data-action="toggle-mode"]');
     ui.shrinkSizeButton = root.querySelector('[data-action="shrink-size"]');
     ui.enlargeSizeButton = root.querySelector('[data-action="enlarge-size"]');
     ui.fixedSize = root.querySelector('[data-role="fixed-size"]');
+    ui.advancedToggle = root.querySelector('[data-action="toggle-advanced"]');
+    ui.advancedContent = root.querySelector('.ocr-box-helper__advanced-content');
     ui.autoAdvance = root.querySelector('[data-action="auto-advance"]');
     ui.reverseAdvance = root.querySelector('[data-action="reverse-advance"]');
     ui.deleteFiveButton = root.querySelector('[data-action="delete-five"]');
+    ui.clearPunctuationButton = root.querySelector('[data-action="clear-punctuation"]');
     ui.clearAllButton = root.querySelector('[data-action="clear-all"]');
     ui.status = root.querySelector('[data-role="status"]');
     ui.collapseButton = root.querySelector('[data-action="collapse"]');
 
-    ui.modeButtons.forEach((button) => {
-      button.addEventListener("click", () => changeMode(button.dataset.mode));
+    ui.toggleModeButton.addEventListener("click", () => {
+      const nextMode = state.settings.drawMode === "single-fixed" ? "native" : "single-fixed";
+      changeMode(nextMode);
     });
     ui.shrinkSizeButton.addEventListener("click", () => changeFixedScale(-10));
     ui.enlargeSizeButton.addEventListener("click", () => changeFixedScale(10));
+    ui.advancedToggle.addEventListener("click", () => {
+      state.advancedExpanded = !state.advancedExpanded;
+      renderToolbar();
+    });
     ui.autoAdvance.addEventListener("change", async () => {
       state.settings.autoAdvance = ui.autoAdvance.checked;
       await storageSet({ autoAdvance: state.settings.autoAdvance });
@@ -218,6 +228,7 @@
       renderToolbar();
     });
     ui.deleteFiveButton.addEventListener("click", deleteNextFiveBoxes);
+    ui.clearPunctuationButton.addEventListener("click", clearPunctuationBoxes);
     ui.clearAllButton.addEventListener("click", clearAllBoxes);
     ui.collapseButton.addEventListener("click", () => {
       state.collapsed = !state.collapsed;
@@ -309,22 +320,28 @@
     state.root.dataset.collapsed = String(state.collapsed);
     ui.collapseButton.textContent = state.collapsed ? "展开" : "收起";
     ui.collapseButton.setAttribute("aria-expanded", String(!state.collapsed));
-    ui.modeButtons.forEach((button) => {
-      const active = button.dataset.mode === mode;
-      button.setAttribute("aria-pressed", String(active));
-      button.disabled = state.busy;
-    });
+
+    const isActive = mode === "single-fixed";
+    ui.toggleModeButton.textContent = isActive ? "暂停助手" : "单击画框";
+    ui.toggleModeButton.setAttribute("aria-pressed", String(isActive));
+    ui.toggleModeButton.disabled = state.busy;
 
     const size = getFixedSize();
     ui.fixedSize.textContent = `${size.width} × ${size.height} · ${size.scalePercent}%`;
     const sizeDisabled = state.busy || mode !== "single-fixed";
     ui.shrinkSizeButton.disabled = sizeDisabled || size.scalePercent <= 40;
     ui.enlargeSizeButton.disabled = sizeDisabled || size.scalePercent >= 300;
+
+    ui.advancedToggle.textContent = state.advancedExpanded ? "\u25BC 高级选项" : "\u25B6 高级选项";
+    ui.advancedContent.dataset.expanded = String(state.advancedExpanded);
+
     ui.autoAdvance.checked = state.settings.autoAdvance;
     ui.autoAdvance.disabled = state.busy;
     ui.reverseAdvance.checked = state.settings.reverseAdvance;
     ui.reverseAdvance.disabled = state.busy;
     ui.deleteFiveButton.disabled =
+      state.busy || !state.available || !state.editable;
+    ui.clearPunctuationButton.disabled =
       state.busy || !state.available || !state.editable;
     ui.clearAllButton.disabled =
       state.busy || !state.available || !state.editable || isGestureActive();
@@ -808,6 +825,72 @@
       const message = error instanceof Error ? error.message : "未知错误";
       showClearToast(
         `连续删除在 ${deleted} / ${targetIndices.length} 处中止：${message}。`,
+        "error",
+        7500,
+      );
+    } finally {
+      token.cancelled = true;
+      if (state.clearToken === token) state.clearToken = null;
+      state.busy = false;
+      ensureSingleModeIdleTimer();
+      renderToolbar();
+    }
+  }
+
+  function getFramedPunctuationIndices(list = state.list) {
+    return getFramedButtons(list)
+      .filter((button) => core.isCommonPunctuation(button.textContent.trim()))
+      .map((button) => parseCharacterIndex(button))
+      .filter((index) => index !== null)
+      .sort((a, b) => a - b);
+  }
+
+  async function clearPunctuationBoxes() {
+    if (state.busy) return;
+    if (!state.available || !state.editable || !state.list) {
+      showClearToast("当前页面不可编辑，不能清空标点字框。", "error", 6500);
+      return;
+    }
+
+    await settleGestureForBatchDeletion();
+    const targetIndices = getFramedPunctuationIndices();
+    if (targetIndices.length === 0) {
+      showClearToast("当前页面没有带框的中英文标点。", "success", 4500);
+      return;
+    }
+
+    const originalIndex = getCurrentIndex();
+    const pageKey = state.pageKey;
+    const list = state.list;
+    const token = { pageKey, list, cancelled: false };
+    state.clearToken = token;
+    state.busy = true;
+    clearSingleModeIdleTimer();
+    showClearToast(`正在清空标点：0 / ${targetIndices.length}`, "warning");
+    renderToolbar();
+
+    let deleted = 0;
+    try {
+      for (const targetIndex of targetIndices) {
+        await deleteBoxAtIndex(targetIndex, list, token);
+        deleted += 1;
+        showClearToast(
+          `正在清空标点：${deleted} / ${targetIndices.length}`,
+          "warning",
+        );
+      }
+
+      assertClearStillValid(token);
+      if (originalIndex !== null) selectCharacter(originalIndex);
+      showClearToast(
+        `已清空 ${deleted} 个中英文标点字框；尚未保存，刷新可恢复。`,
+        "success",
+        4500,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "未知错误";
+      showClearToast(
+        `清空标点在 ${deleted} / ${targetIndices.length} 处中止：${message}。当前仍只是未保存草稿，可刷新恢复。`,
         "error",
         7500,
       );

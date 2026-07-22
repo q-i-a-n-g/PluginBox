@@ -169,6 +169,7 @@
 
           <div class="ocr-box-helper__delete-actions">
             <button class="ocr-box-helper__button ocr-box-helper__batch-delete" type="button" data-action="delete-five" aria-label="从当前字符开始连续删除五个字框">连续删除 5 个</button>
+            <button class="ocr-box-helper__button ocr-box-helper__punctuation-delete" type="button" data-action="clear-punctuation">清空标点字框</button>
             <button class="ocr-box-helper__button ocr-box-helper__danger" type="button" data-action="clear-all">清空全部字框</button>
           </div>
 
@@ -189,6 +190,7 @@
     ui.autoAdvance = root.querySelector('[data-action="auto-advance"]');
     ui.reverseAdvance = root.querySelector('[data-action="reverse-advance"]');
     ui.deleteFiveButton = root.querySelector('[data-action="delete-five"]');
+    ui.clearPunctuationButton = root.querySelector('[data-action="clear-punctuation"]');
     ui.clearAllButton = root.querySelector('[data-action="clear-all"]');
     ui.status = root.querySelector('[data-role="status"]');
     ui.collapseButton = root.querySelector('[data-action="collapse"]');
@@ -226,6 +228,7 @@
       renderToolbar();
     });
     ui.deleteFiveButton.addEventListener("click", deleteNextFiveBoxes);
+    ui.clearPunctuationButton.addEventListener("click", clearPunctuationBoxes);
     ui.clearAllButton.addEventListener("click", clearAllBoxes);
     ui.collapseButton.addEventListener("click", () => {
       state.collapsed = !state.collapsed;
@@ -337,6 +340,8 @@
     ui.reverseAdvance.checked = state.settings.reverseAdvance;
     ui.reverseAdvance.disabled = state.busy;
     ui.deleteFiveButton.disabled =
+      state.busy || !state.available || !state.editable;
+    ui.clearPunctuationButton.disabled =
       state.busy || !state.available || !state.editable;
     ui.clearAllButton.disabled =
       state.busy || !state.available || !state.editable || isGestureActive();
@@ -820,6 +825,72 @@
       const message = error instanceof Error ? error.message : "未知错误";
       showClearToast(
         `连续删除在 ${deleted} / ${targetIndices.length} 处中止：${message}。`,
+        "error",
+        7500,
+      );
+    } finally {
+      token.cancelled = true;
+      if (state.clearToken === token) state.clearToken = null;
+      state.busy = false;
+      ensureSingleModeIdleTimer();
+      renderToolbar();
+    }
+  }
+
+  function getFramedPunctuationIndices(list = state.list) {
+    return getFramedButtons(list)
+      .filter((button) => core.isCommonPunctuation(button.textContent.trim()))
+      .map((button) => parseCharacterIndex(button))
+      .filter((index) => index !== null)
+      .sort((a, b) => a - b);
+  }
+
+  async function clearPunctuationBoxes() {
+    if (state.busy) return;
+    if (!state.available || !state.editable || !state.list) {
+      showClearToast("当前页面不可编辑，不能清空标点字框。", "error", 6500);
+      return;
+    }
+
+    await settleGestureForBatchDeletion();
+    const targetIndices = getFramedPunctuationIndices();
+    if (targetIndices.length === 0) {
+      showClearToast("当前页面没有带框的中英文标点。", "success", 4500);
+      return;
+    }
+
+    const originalIndex = getCurrentIndex();
+    const pageKey = state.pageKey;
+    const list = state.list;
+    const token = { pageKey, list, cancelled: false };
+    state.clearToken = token;
+    state.busy = true;
+    clearSingleModeIdleTimer();
+    showClearToast(`正在清空标点：0 / ${targetIndices.length}`, "warning");
+    renderToolbar();
+
+    let deleted = 0;
+    try {
+      for (const targetIndex of targetIndices) {
+        await deleteBoxAtIndex(targetIndex, list, token);
+        deleted += 1;
+        showClearToast(
+          `正在清空标点：${deleted} / ${targetIndices.length}`,
+          "warning",
+        );
+      }
+
+      assertClearStillValid(token);
+      if (originalIndex !== null) selectCharacter(originalIndex);
+      showClearToast(
+        `已清空 ${deleted} 个中英文标点字框；尚未保存，刷新可恢复。`,
+        "success",
+        4500,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "未知错误";
+      showClearToast(
+        `清空标点在 ${deleted} / ${targetIndices.length} 处中止：${message}。当前仍只是未保存草稿，可刷新恢复。`,
         "error",
         7500,
       );

@@ -20,7 +20,7 @@ const downloadBtn = document.getElementById("downloadBtn");
 const exportBtn = document.getElementById("exportBtn");
 let activeDownloadTaskId = "";
 
-document.getElementById("okBtn").addEventListener("click", extract);
+document.getElementById("previewBtn").addEventListener("click", previewLinks);
 downloadBtn.addEventListener("click", downloadAll);
 exportBtn.addEventListener("click", exportExcel);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
@@ -57,36 +57,41 @@ function showStatus(message, type) {
   statusEl.className = `status show ${type}`;
 }
 
-function parseImageLinks(text) {
-  const raw = trimTrailingBlankLines(text).replace(/\\\//g, "/").replace(/&amp;/g, "&");
-  const matches = raw.match(/https?:\/\/[^\s"'<>，。；、)\]}]+/g) || [];
+function parseDirectImageLinks(text) {
   const seen = new Set();
   const out = [];
-  for (const match of matches) {
-    const link = match.replace(/[),.;，。；]+$/g, "");
-    if (!IMAGE_EXT_RE.test(link) || seen.has(link)) continue;
+
+  for (const line of trimTrailingBlankLines(text).split(/\r?\n/)) {
+    const link = line.trim().replace(/&amp;/g, "&");
+    if (!link || seen.has(link) || !IMAGE_EXT_RE.test(link)) continue;
+    try {
+      const parsed = new URL(link);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+    } catch (_error) {
+      continue;
+    }
     seen.add(link);
     out.push(link);
   }
   return out;
 }
 
-function extract() {
+function previewLinks() {
   input.value = trimTrailingBlankLines(input.value);
   updateCounter();
-  links = parseImageLinks(input.value);
+  links = parseDirectImageLinks(input.value);
   page = 1;
   cache.clear();
   if (!links.length) {
     reset();
-    showStatus("未找到图片链接。", "error");
+    showStatus("请输入有效的图片链接，每行一个。", "error");
     return;
   }
   results.classList.add("show");
   downloadBtn.disabled = false;
   exportBtn.disabled = false;
   render();
-  showStatus(`已提取 ${links.length} 条图片链接。`, "success");
+  showStatus(`已加载 ${links.length} 条图片链接。`, "success");
 }
 
 function reset() {

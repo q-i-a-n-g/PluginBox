@@ -12,7 +12,7 @@ function toggleToolbox(tabId) {
   chrome.scripting.executeScript(
     {
       target: { tabId },
-      files: ["content.js"]
+      files: ["tool_site_rules.js", "content.js"]
     },
     () => {
       const injectError = chrome.runtime.lastError;

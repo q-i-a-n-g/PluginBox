@@ -27,20 +27,8 @@
         "<all_urls>"
       ],
       "js": [
+        "tool_site_rules.js",
         "content.js"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://metis-aione-test.zhenguanyu.com/metis-aione-eval/samples/*"
-      ],
-      "js": [
-        "ocr_box_core.js",
-        "ocr_box_tool.js"
-      ],
-      "css": [
-        "ocr_box_tool.css"
       ],
       "run_at": "document_idle"
     }

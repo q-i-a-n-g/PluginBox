@@ -1,4 +1,5 @@
 const statusEl = document.getElementById("status");
+const siteRules = globalThis.PluginToolboxSiteRules;
 
 document.querySelector("[data-help]").addEventListener("click", async () => {
   await chrome.tabs.create({ url: chrome.runtime.getURL("README.pdf") });
@@ -8,6 +9,20 @@ document.querySelector("[data-help]").addEventListener("click", async () => {
 document.querySelectorAll("[data-tool]").forEach((button) => {
   button.addEventListener("click", () => openTool(button.dataset.tool));
 });
+
+async function updateToolAvailability() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    for (const tool of ["images", "eval"]) {
+      const button = document.querySelector(`[data-tool="${tool}"]`);
+      const supported = siteRules.isToolSupported(tool, tab?.url || "");
+      button.disabled = !supported;
+      button.title = supported ? "" : siteRules.unavailableMessage(tool);
+    }
+  } catch (_error) {
+    // Click handling still enforces the same site rules.
+  }
+}
 
 async function openTool(tool) {
   if (tool === "links") {
@@ -28,10 +43,15 @@ async function openTool(tool) {
     return;
   }
 
+  if (!siteRules.isToolSupported(tool, tab.url || "")) {
+    showError(siteRules.unavailableMessage(tool));
+    return;
+  }
+
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ["content.js"]
+      files: ["tool_site_rules.js", "content.js"]
     });
     const response = await chrome.tabs.sendMessage(tab.id, {
       type: "TOOLBOX_TOGGLE_TOOL",
@@ -51,3 +71,5 @@ function showError(message) {
   statusEl.textContent = message;
   statusEl.className = "status show";
 }
+
+void updateToolAvailability();
