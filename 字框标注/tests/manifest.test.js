@@ -76,17 +76,20 @@ test("punctuation clear deletes every framed Chinese or English punctuation", ()
   const styles = fs.readFileSync(path.join(extensionRoot, "content.css"), "utf8");
   const deleteFivePosition = source.indexOf('data-action="delete-five"');
   const punctuationPosition = source.indexOf('data-action="clear-punctuation"');
-  const clearAllPosition = source.indexOf('data-action="clear-all"');
   assert.ok(
     deleteFivePosition >= 0 &&
-      deleteFivePosition < punctuationPosition &&
-      punctuationPosition < clearAllPosition,
+      deleteFivePosition < punctuationPosition,
   );
+  assert.match(
+    source,
+    /ocr-box-helper__advanced-content[\s\S]*data-action="clear-all"[\s\S]*ocr-box-helper__delete-actions/,
+  );
+  assert.match(source, /高级功能/);
   assert.match(source, /function getFramedPunctuationIndices/);
   assert.match(source, /core\.isCommonPunctuation\(button\.textContent\.trim\(\)\)/);
   assert.match(source, /await deleteBoxAtIndex\(targetIndex, list, token\)/);
   assert.match(source, /正在清空标点：/);
-  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 test("extension action can inject and toggle the helper", () => {
@@ -140,4 +143,67 @@ test("single draw mode pauses after five idle seconds without polling", () => {
   assert.match(source, /singleModeIdleTimer = window\.setTimeout/);
   assert.match(source, /state\.settings\.drawMode = "native"/);
   assert.doesNotMatch(source, /setInterval\s*\(/);
+});
+
+test("minimal mode persists a draggable position and exposes only two actions", () => {
+  const source = fs.readFileSync(path.join(extensionRoot, "content.js"), "utf8");
+  const styles = fs.readFileSync(path.join(extensionRoot, "content.css"), "utf8");
+  assert.match(source, /minimalMode: false/);
+  assert.match(source, /minimalPosition: null/);
+  assert.match(source, /data-action="minimal-mode"/);
+  assert.match(source, /onMinimalDragStart/);
+  assert.match(source, /setPointerCapture/);
+  assert.match(source, /storageSet\(\{ minimalPosition:/);
+  assert.match(source, /极简模式 · 双击恢复/);
+  assert.match(
+    styles,
+    /data-minimal="true"[\s\S]*ocr-box-helper__punctuation-delete/,
+  );
+  assert.match(
+    styles,
+    /data-minimal="true"[\s\S]*ocr-box-helper__delete-actions[\s\S]*grid-template-columns: 1fr/,
+  );
+});
+
+test("floating character navigator locates and highlights the image box", () => {
+  const source = fs.readFileSync(path.join(extensionRoot, "content.js"), "utf8");
+  const styles = fs.readFileSync(path.join(extensionRoot, "content.css"), "utf8");
+  assert.match(source, /aria-label="增强逐字选择"/);
+  assert.match(source, /activateCharacterFromNavigator/);
+  assert.match(source, /characterNavigatorVisible: false/);
+  assert.match(source, /CHARACTER_NAVIGATOR_SCHEMA_VERSION = 1/);
+  assert.match(source, /data-action="toggle-navigator"/);
+  assert.match(source, /data-action="close-navigator"/);
+  assert.match(source, /setCharacterNavigatorVisible/);
+  assert.match(source, /双击某个字，自动定位，高亮展示/);
+  assert.match(source, /"info",\s*4500/);
+  assert.match(source, /function getBoxElement/);
+  assert.match(source, /function centerCharacterInSurface/);
+  assert.match(
+    source,
+    /scroller\.scrollTo\(\{ top: scrollTop, behavior: "smooth" \}\)/,
+  );
+  assert.match(source, /window\.scrollTo\(\{ top: pageScrollTop, behavior: "smooth" \}\)/);
+  assert.match(source, /scheduleCharacterCenterCorrection\(index\)/);
+  assert.doesNotMatch(source, /target\.scrollIntoView\(/);
+  assert.match(source, /已在左侧图片中定位并高亮/);
+  assert.match(source, /左侧图片中该字暂无字框/);
+  assert.match(source, /ocr-box-helper__surface-highlight/);
+  assert.match(styles, /\.ocr-box-helper__character-navigator/);
+  assert.match(styles, /data-navigator-visible="false"/);
+  assert.match(
+    styles,
+    /\.ocr-box-helper__character\[data-framed="true"\][\s\S]*background: #fff/,
+  );
+  assert.match(
+    styles,
+    /\.ocr-box-helper__character\[data-framed="false"\][\s\S]*background: #dcfce7/,
+  );
+  assert.match(styles, /\.ocr-box-helper__legend\[data-kind="unframed"\]::before/);
+  assert.match(styles, /\.ocr-box-helper__surface-highlight/);
+  assert.match(styles, /outline: 3px solid #facc15 !important/);
+  assert.doesNotMatch(
+    styles,
+    /\.ocr-box-helper__character\[data-framed="true"\]::after/,
+  );
 });

@@ -47,11 +47,16 @@
   const BOX_SELECTOR = 'button[aria-label$=" 的字框"]';
   const SINGLE_MODE_IDLE_MS = 5000;
   const SETTINGS_SCHEMA_VERSION = 2;
+  const CHARACTER_NAVIGATOR_SCHEMA_VERSION = 1;
   const SETTINGS_DEFAULTS = {
     drawMode: "native",
     autoAdvance: true,
     reverseAdvance: false,
     fixedScalePercent: 100,
+    minimalMode: false,
+    minimalPosition: null,
+    characterNavigatorVisible: false,
+    characterNavigatorSchemaVersion: 0,
     settingsSchemaVersion: 0,
   };
   const MODES = new Set(["single-fixed", "native"]);
@@ -72,6 +77,12 @@
     clearToastTimer: null,
     collapsed: false,
     advancedExpanded: false,
+    minimalDrag: null,
+    highlightedCharacterIndex: null,
+    highlightedSurfaceBox: null,
+    pendingNavigatorLocateIndex: null,
+    navigatorCenterTimer: null,
+    navigatorSignature: "",
     statusText: "正在连接标注页面…",
     statusTone: "info",
     availabilityKey: "",
@@ -118,8 +129,31 @@
         value.fixedScalePercent,
         SETTINGS_DEFAULTS.fixedScalePercent,
       ),
+      minimalMode:
+        typeof value.minimalMode === "boolean"
+          ? value.minimalMode
+          : SETTINGS_DEFAULTS.minimalMode,
+      minimalPosition: normalizeMinimalPosition(value.minimalPosition),
+      characterNavigatorVisible:
+        Number(value.characterNavigatorSchemaVersion) >=
+          CHARACTER_NAVIGATOR_SCHEMA_VERSION &&
+        typeof value.characterNavigatorVisible === "boolean"
+          ? value.characterNavigatorVisible
+          : SETTINGS_DEFAULTS.characterNavigatorVisible,
+      characterNavigatorSchemaVersion: CHARACTER_NAVIGATOR_SCHEMA_VERSION,
       settingsSchemaVersion: SETTINGS_SCHEMA_VERSION,
     };
+  }
+
+  function normalizeMinimalPosition(value) {
+    if (
+      !value ||
+      !Number.isFinite(Number(value.x)) ||
+      !Number.isFinite(Number(value.y))
+    ) {
+      return null;
+    }
+    return { x: Number(value.x), y: Number(value.y) };
   }
 
   function buildToolbar() {
@@ -131,14 +165,15 @@
     root.setAttribute("aria-label", "字框标注助手");
     root.innerHTML = `
       <div class="ocr-box-helper__panel">
-        <header class="ocr-box-helper__header">
+        <header class="ocr-box-helper__header" data-role="drag-handle">
           <h2 class="ocr-box-helper__title">字框标注助手</h2>
           <div class="ocr-box-helper__header-actions">
+            <button class="ocr-box-helper__header-button" type="button" data-action="minimal-mode">极简模式</button>
             <button class="ocr-box-helper__collapse" type="button" data-action="collapse" aria-expanded="true">收起</button>
           </div>
         </header>
         <div class="ocr-box-helper__body">
-          <section>
+          <section class="ocr-box-helper__mode-section">
             <span class="ocr-box-helper__label">绘框模式</span>
             <div class="ocr-box-helper__modes" role="group" aria-label="绘框模式">
               <button class="ocr-box-helper__mode" type="button" data-action="toggle-mode">单击画框</button>
@@ -154,7 +189,9 @@
             </div>
           </section>
 
-          <button class="ocr-box-helper__advanced-toggle" type="button" data-action="toggle-advanced">▶ 高级选项</button>
+          <button class="ocr-box-helper__button ocr-box-helper__navigator-toggle" type="button" data-action="toggle-navigator" aria-pressed="true">关闭逐字选择</button>
+
+          <button class="ocr-box-helper__advanced-toggle" type="button" data-action="toggle-advanced">▶ 高级功能</button>
           <div class="ocr-box-helper__advanced-content" data-expanded="false">
             <label class="ocr-box-helper__switch-row">
               <span>成框后跳过标点并自动选字</span>
@@ -165,26 +202,44 @@
               <span>反向标注（成框后选择上一字）</span>
               <input class="ocr-box-helper__switch" data-action="reverse-advance" type="checkbox">
             </label>
+
+            <button class="ocr-box-helper__button ocr-box-helper__danger" type="button" data-action="clear-all">清空全部字框</button>
           </div>
 
           <div class="ocr-box-helper__delete-actions">
             <button class="ocr-box-helper__button ocr-box-helper__batch-delete" type="button" data-action="delete-five" aria-label="从当前字符开始连续删除五个字框">连续删除 5 个</button>
             <button class="ocr-box-helper__button ocr-box-helper__punctuation-delete" type="button" data-action="clear-punctuation">清空标点字框</button>
-            <button class="ocr-box-helper__button ocr-box-helper__danger" type="button" data-action="clear-all">清空全部字框</button>
           </div>
 
           <div class="ocr-box-helper__status" data-role="status" data-tone="info" role="status" aria-live="polite"></div>
         </div>
       </div>
+      <aside class="ocr-box-helper__character-navigator" aria-label="增强逐字选择">
+        <div class="ocr-box-helper__navigator-header">
+          <strong>逐字选择</strong>
+          <div class="ocr-box-helper__navigator-meta">
+            <span class="ocr-box-helper__legend" data-kind="framed">有框</span>
+            <span class="ocr-box-helper__legend" data-kind="unframed">无框</span>
+            <span data-role="character-count">0 字</span>
+            <button class="ocr-box-helper__navigator-close" type="button" data-action="close-navigator" aria-label="关闭增强逐字选择">关闭</button>
+          </div>
+        </div>
+        <div class="ocr-box-helper__character-list" data-role="character-list"></div>
+      </aside>
     `;
 
     document.body.appendChild(root);
     ensureClearToast();
     state.root = root;
+    ui.header = root.querySelector('[data-role="drag-handle"]');
+    ui.title = root.querySelector(".ocr-box-helper__title");
+    ui.minimalModeButton = root.querySelector('[data-action="minimal-mode"]');
     ui.toggleModeButton = root.querySelector('[data-action="toggle-mode"]');
     ui.shrinkSizeButton = root.querySelector('[data-action="shrink-size"]');
     ui.enlargeSizeButton = root.querySelector('[data-action="enlarge-size"]');
     ui.fixedSize = root.querySelector('[data-role="fixed-size"]');
+    ui.navigatorToggle = root.querySelector('[data-action="toggle-navigator"]');
+    ui.navigatorClose = root.querySelector('[data-action="close-navigator"]');
     ui.advancedToggle = root.querySelector('[data-action="toggle-advanced"]');
     ui.advancedContent = root.querySelector('.ocr-box-helper__advanced-content');
     ui.autoAdvance = root.querySelector('[data-action="auto-advance"]');
@@ -194,6 +249,8 @@
     ui.clearAllButton = root.querySelector('[data-action="clear-all"]');
     ui.status = root.querySelector('[data-role="status"]');
     ui.collapseButton = root.querySelector('[data-action="collapse"]');
+    ui.characterList = root.querySelector('[data-role="character-list"]');
+    ui.characterCount = root.querySelector('[data-role="character-count"]');
 
     ui.toggleModeButton.addEventListener("click", () => {
       const nextMode = state.settings.drawMode === "single-fixed" ? "native" : "single-fixed";
@@ -230,9 +287,41 @@
     ui.deleteFiveButton.addEventListener("click", deleteNextFiveBoxes);
     ui.clearPunctuationButton.addEventListener("click", clearPunctuationBoxes);
     ui.clearAllButton.addEventListener("click", clearAllBoxes);
+    ui.navigatorToggle.addEventListener("click", () => {
+      void setCharacterNavigatorVisible(
+        !state.settings.characterNavigatorVisible,
+      );
+    });
+    ui.navigatorClose.addEventListener("click", () => {
+      void setCharacterNavigatorVisible(false);
+    });
+    ui.minimalModeButton.addEventListener("click", () => {
+      void setMinimalMode(true);
+    });
     ui.collapseButton.addEventListener("click", () => {
       state.collapsed = !state.collapsed;
       renderToolbar();
+    });
+    ui.header.addEventListener("pointerdown", onMinimalDragStart);
+    ui.header.addEventListener("pointermove", onMinimalDragMove);
+    ui.header.addEventListener("pointerup", onMinimalDragEnd);
+    ui.header.addEventListener("pointercancel", onMinimalDragEnd);
+    ui.header.addEventListener("dblclick", () => {
+      if (state.settings.minimalMode) void setMinimalMode(false);
+    });
+    ui.header.addEventListener("keydown", (event) => {
+      if (
+        state.settings.minimalMode &&
+        (event.key === "Enter" || event.key === " ")
+      ) {
+        event.preventDefault();
+        void setMinimalMode(false);
+      }
+    });
+    ui.characterList.addEventListener("click", (event) => {
+      const button = event.target.closest?.("button[data-character-index]");
+      if (!button) return;
+      activateCharacterFromNavigator(Number(button.dataset.characterIndex));
     });
     renderToolbar();
   }
@@ -314,12 +403,150 @@
     renderToolbar();
   }
 
+  async function setMinimalMode(enabled) {
+    state.settings.minimalMode = Boolean(enabled);
+    state.collapsed = false;
+    renderToolbar();
+    if (state.settings.minimalMode) {
+      const fallback = {
+        x: window.innerWidth - state.root.offsetWidth - 16,
+        y: 16,
+      };
+      applyMinimalPosition(state.settings.minimalPosition || fallback);
+    }
+    await storageSet({
+      minimalMode: state.settings.minimalMode,
+      minimalPosition: state.settings.minimalPosition,
+    });
+  }
+
+  async function setCharacterNavigatorVisible(visible) {
+    const wasVisible = state.settings.characterNavigatorVisible;
+    state.settings.characterNavigatorVisible = Boolean(visible);
+    renderToolbar();
+    if (!wasVisible && state.settings.characterNavigatorVisible) {
+      showClearToast(
+        "双击某个字，自动定位，高亮展示",
+        "info",
+        4500,
+      );
+    }
+    await storageSet({
+      characterNavigatorVisible: state.settings.characterNavigatorVisible,
+    });
+  }
+
+  function applyMinimalPosition(position) {
+    if (!state.root || !state.settings.minimalMode) return;
+    const margin = 8;
+    const width = state.root.offsetWidth || 220;
+    const height = state.root.offsetHeight || 150;
+    const next = {
+      x: Math.round(
+        clamp(
+          position.x,
+          margin,
+          Math.max(margin, window.innerWidth - width - margin),
+        ),
+      ),
+      y: Math.round(
+        clamp(
+          position.y,
+          margin,
+          Math.max(margin, window.innerHeight - height - margin),
+        ),
+      ),
+    };
+    state.settings.minimalPosition = next;
+    state.root.style.left = `${next.x}px`;
+    state.root.style.top = `${next.y}px`;
+    state.root.style.right = "auto";
+  }
+
+  function clearMinimalPositionStyles() {
+    if (!state.root) return;
+    state.root.style.removeProperty("left");
+    state.root.style.removeProperty("top");
+    state.root.style.removeProperty("right");
+  }
+
+  function onMinimalDragStart(event) {
+    if (
+      !state.settings.minimalMode ||
+      event.button !== 0 ||
+      !event.isPrimary ||
+      event.target.closest?.("button")
+    ) {
+      return;
+    }
+    const rect = state.root.getBoundingClientRect();
+    state.minimalDrag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+    };
+    state.root.dataset.dragging = "true";
+    ui.header.setPointerCapture?.(event.pointerId);
+  }
+
+  function onMinimalDragMove(event) {
+    const drag = state.minimalDrag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) < 4) return;
+    drag.moved = true;
+    event.preventDefault();
+    applyMinimalPosition({
+      x: drag.originX + deltaX,
+      y: drag.originY + deltaY,
+    });
+  }
+
+  function onMinimalDragEnd(event) {
+    const drag = state.minimalDrag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (ui.header.hasPointerCapture?.(event.pointerId)) {
+      ui.header.releasePointerCapture(event.pointerId);
+    }
+    state.minimalDrag = null;
+    state.root.dataset.dragging = "false";
+    if (drag.moved) {
+      event.preventDefault();
+      void storageSet({ minimalPosition: state.settings.minimalPosition });
+    }
+  }
+
   function renderToolbar() {
     if (!state.root) return;
     const mode = state.settings.drawMode;
+    const minimalMode = state.settings.minimalMode;
+    state.root.dataset.minimal = String(minimalMode);
+    state.root.dataset.available = String(state.available);
+    state.root.dataset.navigatorVisible = String(
+      state.settings.characterNavigatorVisible,
+    );
     state.root.dataset.collapsed = String(state.collapsed);
     ui.collapseButton.textContent = state.collapsed ? "展开" : "收起";
     ui.collapseButton.setAttribute("aria-expanded", String(!state.collapsed));
+    ui.title.textContent = minimalMode ? "极简模式 · 双击恢复" : "字框标注助手";
+    if (minimalMode) {
+      ui.header.tabIndex = 0;
+      ui.header.setAttribute("aria-label", "拖动极简工具，双击或按回车恢复完整模式");
+      applyMinimalPosition(
+        state.settings.minimalPosition || {
+          x: window.innerWidth - state.root.offsetWidth - 16,
+          y: 16,
+        },
+      );
+    } else {
+      ui.header.removeAttribute("tabindex");
+      ui.header.removeAttribute("aria-label");
+      clearMinimalPositionStyles();
+    }
 
     const isActive = mode === "single-fixed";
     ui.toggleModeButton.textContent = isActive ? "暂停助手" : "单击画框";
@@ -331,8 +558,15 @@
     const sizeDisabled = state.busy || mode !== "single-fixed";
     ui.shrinkSizeButton.disabled = sizeDisabled || size.scalePercent <= 40;
     ui.enlargeSizeButton.disabled = sizeDisabled || size.scalePercent >= 300;
+    ui.navigatorToggle.textContent = state.settings.characterNavigatorVisible
+      ? "关闭逐字选择"
+      : "打开逐字选择";
+    ui.navigatorToggle.setAttribute(
+      "aria-pressed",
+      String(state.settings.characterNavigatorVisible),
+    );
 
-    ui.advancedToggle.textContent = state.advancedExpanded ? "\u25BC 高级选项" : "\u25B6 高级选项";
+    ui.advancedToggle.textContent = state.advancedExpanded ? "\u25BC 高级功能" : "\u25B6 高级功能";
     ui.advancedContent.dataset.expanded = String(state.advancedExpanded);
 
     ui.autoAdvance.checked = state.settings.autoAdvance;
@@ -455,10 +689,17 @@
   }
 
   function getRegion(index) {
-    if (!state.surface || index === null) return null;
-    const boxes = Array.from(state.surface.querySelectorAll(BOX_SELECTOR));
-    const box = boxes.find((element) => parseCharacterIndex(element) === index);
+    const box = getBoxElement(index);
     return box ? parseRegionTitle(box.getAttribute("title")) : null;
+  }
+
+  function getBoxElement(index) {
+    if (!state.surface || index === null) return null;
+    return (
+      Array.from(state.surface.querySelectorAll(BOX_SELECTOR)).find(
+        (element) => parseCharacterIndex(element) === index,
+      ) || null
+    );
   }
 
   function getFramedButtons(list = state.list) {
@@ -731,6 +972,170 @@
           (button) => parseCharacterIndex(button) !== null,
         )
       : [];
+  }
+
+  function renderCharacterNavigator() {
+    if (!ui.characterList || !ui.characterCount) return;
+    const characterButtons = getCharacterButtons();
+    const framedIndices = new Set(
+      getFramedButtons()
+        .map((button) => parseCharacterIndex(button))
+        .filter((index) => index !== null),
+    );
+    const entries = characterButtons.map((button) => ({
+      index: parseCharacterIndex(button),
+      text: button.textContent.trim(),
+    }));
+    const signature = `${state.pageKey}:${entries
+      .map(
+        (entry) =>
+          `${entry.index}:${entry.text}:${framedIndices.has(entry.index)}`,
+      )
+      .join("|")}`;
+
+    if (signature !== state.navigatorSignature) {
+      state.navigatorSignature = signature;
+      const fragment = document.createDocumentFragment();
+      for (const entry of entries) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "ocr-box-helper__character";
+        button.dataset.characterIndex = String(entry.index);
+        button.dataset.framed = String(framedIndices.has(entry.index));
+        button.textContent = entry.text || "□";
+        button.title = `第 ${entry.index + 1} 字：${entry.text || "空白"}`;
+        fragment.appendChild(button);
+      }
+      ui.characterList.replaceChildren(fragment);
+    }
+
+    ui.characterCount.textContent = `${entries.length} 字`;
+    const currentIndex = getCurrentIndex();
+    for (const button of ui.characterList.querySelectorAll(
+      "button[data-character-index]",
+    )) {
+      const selected = Number(button.dataset.characterIndex) === currentIndex;
+      button.dataset.selected = String(selected);
+      if (selected) button.setAttribute("aria-current", "true");
+      else button.removeAttribute("aria-current");
+    }
+    if (state.highlightedCharacterIndex !== null) {
+      highlightSurfaceCharacter(state.highlightedCharacterIndex);
+    }
+  }
+
+  function activateCharacterFromNavigator(index) {
+    if (!Number.isInteger(index)) return;
+    const target = getCharacterButtons().find(
+      (button) => parseCharacterIndex(button) === index,
+    );
+    if (!target || target.disabled) {
+      setStatus(`第 ${index + 1} 字当前不可选择。`, "warning");
+      return;
+    }
+
+    state.highlightedCharacterIndex = index;
+    state.pendingNavigatorLocateIndex = index;
+    target.click();
+    const located = highlightSurfaceCharacter(index);
+    renderCharacterNavigator();
+    setStatus(
+      located
+        ? `已在左侧图片中定位并高亮第 ${index + 1} 字。`
+        : `已选择第 ${index + 1} 字；左侧图片中该字暂无字框。`,
+      located ? "success" : "warning",
+    );
+  }
+
+  function highlightSurfaceCharacter(index) {
+    const target = getBoxElement(index);
+    if (state.highlightedSurfaceBox !== target) {
+      state.highlightedSurfaceBox?.classList.remove(
+        "ocr-box-helper__surface-highlight",
+      );
+      state.highlightedSurfaceBox = target || null;
+    }
+    target?.classList.add("ocr-box-helper__surface-highlight");
+    if (target && state.pendingNavigatorLocateIndex === index) {
+      state.pendingNavigatorLocateIndex = null;
+      centerCharacterInSurface(target);
+      scheduleCharacterCenterCorrection(index);
+    }
+    if (!target && state.pendingNavigatorLocateIndex === index) {
+      state.pendingNavigatorLocateIndex = null;
+    }
+    return Boolean(target);
+  }
+
+  function centerCharacterInSurface(target) {
+    if (!state.surface || !target || !state.surface.contains(target)) return;
+    const scroller = findScrollableAncestor(target);
+    if (!scroller) {
+      centerElementInViewport(target);
+      return;
+    }
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const targetCenter =
+      targetRect.top -
+      scrollerRect.top +
+      scroller.scrollTop +
+      targetRect.height / 2;
+    const scrollTop = clamp(
+      targetCenter - scroller.clientHeight / 2,
+      0,
+      Math.max(0, scroller.scrollHeight - scroller.clientHeight),
+    );
+    if (typeof scroller.scrollTo === "function") {
+      scroller.scrollTo({ top: scrollTop, behavior: "smooth" });
+    } else {
+      scroller.scrollTop = scrollTop;
+    }
+    centerElementInViewport(scroller);
+  }
+
+  function centerElementInViewport(element) {
+    const rect = element.getBoundingClientRect();
+    const viewportOffset =
+      rect.top + rect.height / 2 - window.innerHeight / 2;
+    const scrollingElement = document.scrollingElement;
+    const maxPageScroll = Math.max(
+      0,
+      (scrollingElement?.scrollHeight || 0) - window.innerHeight,
+    );
+    const pageScrollTop = clamp(
+      window.scrollY + viewportOffset,
+      0,
+      maxPageScroll,
+    );
+    window.scrollTo({ top: pageScrollTop, behavior: "smooth" });
+  }
+
+  function findScrollableAncestor(element) {
+    let ancestor = element.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      const overflowY = getComputedStyle(ancestor).overflowY;
+      if (
+        ancestor.scrollHeight > ancestor.clientHeight + 1 &&
+        ["auto", "scroll", "hidden"].includes(overflowY)
+      ) {
+        return ancestor;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return null;
+  }
+
+  function scheduleCharacterCenterCorrection(index) {
+    if (state.navigatorCenterTimer !== null) {
+      window.clearTimeout(state.navigatorCenterTimer);
+    }
+    state.navigatorCenterTimer = window.setTimeout(() => {
+      state.navigatorCenterTimer = null;
+      if (state.highlightedCharacterIndex !== index) return;
+      const target = getBoxElement(index);
+      if (target) centerCharacterInSurface(target);
+    }, 160);
   }
 
   async function selectAdjacentContentCharacter(currentIndex, direction) {
@@ -1070,7 +1475,17 @@
     const nextPageKey = location.pathname;
     if (nextPageKey !== state.pageKey) {
       clearSingleModeIdleTimer();
+      if (state.navigatorCenterTimer !== null) {
+        window.clearTimeout(state.navigatorCenterTimer);
+        state.navigatorCenterTimer = null;
+      }
       state.clearToken && (state.clearToken.cancelled = true);
+      state.highlightedSurfaceBox?.classList.remove(
+        "ocr-box-helper__surface-highlight",
+      );
+      state.highlightedSurfaceBox = null;
+      state.highlightedCharacterIndex = null;
+      state.pendingNavigatorLocateIndex = null;
       state.pageKey = nextPageKey;
       state.availabilityKey = "";
       resetGestureForRemount();
@@ -1110,6 +1525,7 @@
       }
     }
     ensureSingleModeIdleTimer();
+    renderCharacterNavigator();
     renderToolbar();
   }
 
@@ -1119,10 +1535,21 @@
     requestAnimationFrame(syncPage);
   }
 
+  function onWindowResize() {
+    if (state.settings.minimalMode && state.settings.minimalPosition) {
+      applyMinimalPosition(state.settings.minimalPosition);
+      void storageSet({ minimalPosition: state.settings.minimalPosition });
+    }
+    scheduleSync();
+  }
+
   async function initialize() {
     state.settings = normalizeSettings(await storageGet(SETTINGS_DEFAULTS));
     await storageSet({
       drawMode: state.settings.drawMode,
+      characterNavigatorVisible: state.settings.characterNavigatorVisible,
+      characterNavigatorSchemaVersion:
+        state.settings.characterNavigatorSchemaVersion,
       settingsSchemaVersion: state.settings.settingsSchemaVersion,
     });
     buildToolbar();
@@ -1138,7 +1565,7 @@
       scheduleSync();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.addEventListener("resize", scheduleSync);
+    window.addEventListener("resize", onWindowResize);
   }
 
   initialize().catch((error) => {

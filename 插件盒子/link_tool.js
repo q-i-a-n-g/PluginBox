@@ -1,5 +1,5 @@
 const PAGE_SIZE = 20;
-const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)(?:[?#].*)?$/i;
+const { parseDirectImageLinks } = globalThis.PluginToolboxLinkCore;
 
 let links = [];
 let page = 1;
@@ -55,25 +55,6 @@ function updateCounter() {
 function showStatus(message, type) {
   statusEl.textContent = message;
   statusEl.className = `status show ${type}`;
-}
-
-function parseDirectImageLinks(text) {
-  const seen = new Set();
-  const out = [];
-
-  for (const line of trimTrailingBlankLines(text).split(/\r?\n/)) {
-    const link = line.trim().replace(/&amp;/g, "&");
-    if (!link || seen.has(link) || !IMAGE_EXT_RE.test(link)) continue;
-    try {
-      const parsed = new URL(link);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
-    } catch (_error) {
-      continue;
-    }
-    seen.add(link);
-    out.push(link);
-  }
-  return out;
 }
 
 function previewLinks() {

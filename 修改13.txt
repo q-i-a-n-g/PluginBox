@@ -1,0 +1,9 @@
+1. 字框标注独立插件 和 插件盒子中的字框标注子插件，都这样改
+    - 把“清空全部字框”折叠到“高级功能”中
+    - 增加“极简模式”，仅有2个按钮：“单击画框/暂停助手”、“连续删除5个”；可自由拖动，单击/拖动操作手感好
+    - 增加：增强版“逐字选择”，原始的不好用，增强版的可以以悬浮的文本框出现在页面右侧（或者你有更好的方案也行）；
+        单击文字，则左侧定位到该字，自动上下滑动，使该字大概位于页面上下居中，且黄色高亮显示，方便用户发现它
+
+2. 插件盒子中的“链接预览/下载”，无法识别这种链接，需要修正：
+    003 https://metis-test.fbcontent.cn/metis-gnosis-evaluation/userImage/yK8qXhdThfuLRB9B5NxMyS.jpg
+    https://metis-test.fbcontent.cn/metis-gnosis-evaluation/userImage/HVDEqXc3mKV84iiYp4uwfD.jpg 004

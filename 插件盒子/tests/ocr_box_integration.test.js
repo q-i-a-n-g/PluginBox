@@ -29,6 +29,11 @@ test("字框标注资源由插件盒子按需注入", () => {
 test("字框标注使用单独插件的功能标识并保留盒子样式", () => {
   const source = read("ocr_box_tool.js");
   const styles = read("ocr_box_tool.css");
+  const standaloneSource = fs.readFileSync(
+    path.resolve(extensionRoot, "..", "字框标注", "content.js"),
+    "utf8",
+  );
+  assert.equal(source, standaloneSource);
   assert.match(source, /window\[VISIBILITY_REQUEST_KEY\] !== false/);
   assert.match(source, /ROOT_ID = "ocr-box-helper-root"/);
   assert.match(source, /TOAST_ID = "ocr-box-helper-clear-toast"/);
@@ -76,7 +81,38 @@ test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
   assert.match(source, /core\.findNextContentIndex/);
   assert.match(source, /core\.findPreviousContentIndex/);
   assert.match(source, /core\.isCommonPunctuation/);
-  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(source, /data-action="minimal-mode"/);
+  assert.match(source, /data-action="toggle-navigator"/);
+  assert.match(source, /data-action="close-navigator"/);
+  assert.match(source, /双击某个字，自动定位，高亮展示/);
+  assert.match(source, /aria-label="增强逐字选择"/);
+  assert.match(source, /getBoxElement/);
+  assert.match(source, /centerCharacterInSurface/);
+  assert.match(
+    source,
+    /scroller\.scrollTo\(\{ top: scrollTop, behavior: "smooth" \}\)/,
+  );
+  assert.match(source, /window\.scrollTo\(\{ top: pageScrollTop, behavior: "smooth" \}\)/);
+  assert.match(source, /scheduleCharacterCenterCorrection\(index\)/);
+  assert.doesNotMatch(source, /target\.scrollIntoView\(/);
+  assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /#ocr-box-helper-root\[data-minimal="true"\]/);
+  assert.match(styles, /\.ocr-box-helper__character-navigator/);
+  assert.match(
+    styles,
+    /\.ocr-box-helper__character\[data-framed="true"\][\s\S]*background: #1f2937/,
+  );
+  assert.match(
+    styles,
+    /\.ocr-box-helper__character\[data-framed="false"\][\s\S]*background: rgba\(34, 197, 94, 0\.2\)/,
+  );
+  assert.match(styles, /\.ocr-box-helper__legend\[data-kind="unframed"\]::before/);
+  assert.match(styles, /\.ocr-box-helper__surface-highlight/);
+  assert.match(styles, /outline: 3px solid #facc15 !important/);
+  assert.doesNotMatch(
+    styles,
+    /\.ocr-box-helper__character\[data-framed="true"\]::after/,
+  );
   assert.doesNotMatch(source, /\bfetch\s*\(/);
   assert.doesNotMatch(source, /\bXMLHttpRequest\b/);
 });
