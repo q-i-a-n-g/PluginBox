@@ -385,6 +385,32 @@
   font-size: 12px;
 }
 
+.ocr-box-helper__navigator-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ocr-box-helper__navigator-edit {
+  appearance: none;
+  min-width: 38px;
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid #93c5fd;
+  border-radius: 5px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ocr-box-helper__navigator-edit:hover {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
 .ocr-box-helper__navigator-header span {
   color: #64748b;
   font-variant-numeric: tabular-nums;
@@ -433,6 +459,83 @@
 .ocr-box-helper__navigator-close:hover {
   border-color: #64748b;
   color: #0f172a;
+}
+
+.ocr-box-helper__navigator-flip {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 320ms ease;
+}
+
+.ocr-box-helper__navigator-flip[data-editing="true"] {
+  transform: rotateY(-180deg);
+}
+
+.ocr-box-helper__navigator-face {
+  grid-area: 1 / 1;
+  min-width: 0;
+  backface-visibility: hidden;
+}
+
+.ocr-box-helper__navigator-front {
+  pointer-events: auto;
+}
+
+.ocr-box-helper__navigator-back {
+  display: flex;
+  min-height: min(520px, calc(100vh - 84px));
+  padding: 10px;
+  transform: rotateY(180deg);
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.ocr-box-helper__navigator-flip[data-editing="true"]
+  .ocr-box-helper__navigator-front {
+  pointer-events: none;
+}
+
+.ocr-box-helper__navigator-flip[data-editing="true"]
+  .ocr-box-helper__navigator-back {
+  pointer-events: auto;
+}
+
+.ocr-box-helper__navigator-text-label {
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ocr-box-helper__navigator-text {
+  width: 100%;
+  min-height: 0;
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  resize: none;
+  flex: 1;
+  outline: none;
+}
+
+.ocr-box-helper__navigator-text:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.ocr-box-helper__navigator-text:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.ocr-box-helper__navigator-text:read-only {
+  background: #f8fafc;
+  color: #64748b;
 }
 
 .ocr-box-helper__character-list {
@@ -520,6 +623,10 @@
 
   .ocr-box-helper__character-list {
     max-height: 28vh;
+  }
+
+  .ocr-box-helper__navigator-back {
+    min-height: 28vh;
   }
 }
 

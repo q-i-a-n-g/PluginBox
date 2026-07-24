@@ -14,7 +14,7 @@
         ready: Boolean(root),
         visible: root
           ? root.dataset.interfaceVisible !== "false"
-          : window[VISIBILITY_REQUEST_KEY] !== false,
+          : window[VISIBILITY_REQUEST_KEY] === true,
       });
       return false;
     }
@@ -83,6 +83,9 @@
     pendingNavigatorLocateIndex: null,
     navigatorCenterTimer: null,
     navigatorSignature: "",
+    navigatorEditing: false,
+    pageTextArea: null,
+    syncingNavigatorText: false,
     statusText: "正在连接标注页面…",
     statusTone: "info",
     availabilityKey: "",
@@ -160,7 +163,7 @@
     const root = document.createElement("section");
     root.id = ROOT_ID;
     root.dataset.interfaceVisible = String(
-      window[VISIBILITY_REQUEST_KEY] !== false,
+      window[VISIBILITY_REQUEST_KEY] === true,
     );
     root.setAttribute("aria-label", "字框标注助手");
     root.innerHTML = `
@@ -216,7 +219,10 @@
       </div>
       <aside class="ocr-box-helper__character-navigator" aria-label="增强逐字选择">
         <div class="ocr-box-helper__navigator-header">
-          <strong>逐字选择</strong>
+          <div class="ocr-box-helper__navigator-title">
+            <strong>逐字选择</strong>
+            <button class="ocr-box-helper__navigator-edit" type="button" data-action="edit-navigator">编辑</button>
+          </div>
           <div class="ocr-box-helper__navigator-meta">
             <span class="ocr-box-helper__legend" data-kind="framed">有框</span>
             <span class="ocr-box-helper__legend" data-kind="unframed">无框</span>
@@ -224,7 +230,15 @@
             <button class="ocr-box-helper__navigator-close" type="button" data-action="close-navigator" aria-label="关闭增强逐字选择">关闭</button>
           </div>
         </div>
-        <div class="ocr-box-helper__character-list" data-role="character-list"></div>
+        <div class="ocr-box-helper__navigator-flip" data-role="navigator-flip" data-editing="false">
+          <div class="ocr-box-helper__navigator-face ocr-box-helper__navigator-front">
+            <div class="ocr-box-helper__character-list" data-role="character-list"></div>
+          </div>
+          <div class="ocr-box-helper__navigator-face ocr-box-helper__navigator-back">
+            <label class="ocr-box-helper__navigator-text-label" for="ocr-box-helper-navigator-text">正文文本</label>
+            <textarea id="ocr-box-helper-navigator-text" class="ocr-box-helper__navigator-text" data-role="navigator-text" aria-label="增强逐字选择正文文本"></textarea>
+          </div>
+        </div>
       </aside>
     `;
 
@@ -240,6 +254,13 @@
     ui.fixedSize = root.querySelector('[data-role="fixed-size"]');
     ui.navigatorToggle = root.querySelector('[data-action="toggle-navigator"]');
     ui.navigatorClose = root.querySelector('[data-action="close-navigator"]');
+    ui.navigatorEdit = root.querySelector('[data-action="edit-navigator"]');
+    ui.navigatorFlip = root.querySelector('[data-role="navigator-flip"]');
+    ui.navigatorFront = root.querySelector(
+      ".ocr-box-helper__navigator-front",
+    );
+    ui.navigatorBack = root.querySelector(".ocr-box-helper__navigator-back");
+    ui.navigatorText = root.querySelector('[data-role="navigator-text"]');
     ui.advancedToggle = root.querySelector('[data-action="toggle-advanced"]');
     ui.advancedContent = root.querySelector('.ocr-box-helper__advanced-content');
     ui.autoAdvance = root.querySelector('[data-action="auto-advance"]');
@@ -295,6 +316,8 @@
     ui.navigatorClose.addEventListener("click", () => {
       void setCharacterNavigatorVisible(false);
     });
+    ui.navigatorEdit.addEventListener("click", toggleNavigatorEditing);
+    ui.navigatorText.addEventListener("input", onNavigatorTextInput);
     ui.minimalModeButton.addEventListener("click", () => {
       void setMinimalMode(true);
     });
@@ -337,56 +360,15 @@
     if (mode !== "single-fixed") clearSingleModeIdleTimer();
     await storageSet({ drawMode: mode });
     renderToolbar();
-    if (previousMode === "native" && mode === "single-fixed") {
-      await advanceWhenResumingSingleMode();
-      armSingleModeIdleTimer();
-      return;
-    }
     const messages = {
-      "single-fixed": "单击画框：点击字的中心即可成框。",
+      "single-fixed":
+        previousMode === "native" && getCurrentIndex() === null
+          ? "已切换到单击画框；请选择要标注的文字。"
+          : "单击画框：点击字的中心即可成框。",
       native: "助手已暂停，页面原生拖拽和移动功能可用。",
     };
     setStatus(messages[mode], "success");
     if (mode === "single-fixed") armSingleModeIdleTimer();
-  }
-
-  async function advanceWhenResumingSingleMode() {
-    if (!state.available || !state.list) {
-      setStatus("已切换到单击画框，等待标注页面加载。", "warning");
-      return;
-    }
-    const currentIndex = getCurrentIndex();
-    const direction = state.settings.reverseAdvance ? "backward" : "forward";
-    const initialIndex =
-      currentIndex ?? (direction === "backward" ? getCharacterButtons().length : -1);
-    const result = await selectAdjacentContentCharacter(initialIndex, direction);
-    const adjacentLabel = direction === "backward" ? "上一字" : "下一字";
-    const edgeLabel = direction === "backward" ? "第一个" : "最后一个";
-    if (result.status === "end") {
-      setStatus(`已切换到单击画框；当前已是${edgeLabel}非标点字符。`, "success");
-      return;
-    }
-    if (result.status === "unavailable") {
-      setStatus(`已切换到单击画框，但${adjacentLabel}控件不可用。`, "warning");
-      return;
-    }
-    if (result.status === "timeout") {
-      setStatus(`已切换到单击画框，但自动选择${adjacentLabel}超时。`, "warning");
-      return;
-    }
-    if (currentIndex === null) {
-      setStatus(
-        `已切换到单击画框并选择第 ${result.targetIndex + 1} 字。`,
-        "success",
-      );
-      return;
-    }
-    setStatus(
-      result.skipped > 0
-        ? `已切换到单击画框，跳过 ${result.skipped} 个标点，已选择第 ${result.targetIndex + 1} 字。`
-        : `已切换到单击画框，已选择第 ${result.targetIndex + 1} 字。`,
-      "success",
-    );
   }
 
   async function changeFixedScale(delta) {
@@ -423,6 +405,9 @@
   async function setCharacterNavigatorVisible(visible) {
     const wasVisible = state.settings.characterNavigatorVisible;
     state.settings.characterNavigatorVisible = Boolean(visible);
+    if (!state.settings.characterNavigatorVisible) {
+      state.navigatorEditing = false;
+    }
     renderToolbar();
     if (!wasVisible && state.settings.characterNavigatorVisible) {
       showClearToast(
@@ -434,6 +419,75 @@
     await storageSet({
       characterNavigatorVisible: state.settings.characterNavigatorVisible,
     });
+  }
+
+  function findPageTextArea() {
+    return document.querySelector('textarea[aria-label="正文文本"]');
+  }
+
+  function bindPageTextArea(nextTextArea) {
+    if (nextTextArea === state.pageTextArea) return;
+    state.pageTextArea?.removeEventListener("input", onPageTextInput);
+    state.pageTextArea = nextTextArea || null;
+    state.pageTextArea?.addEventListener("input", onPageTextInput);
+    syncNavigatorTextFromPage();
+  }
+
+  function syncNavigatorTextFromPage() {
+    if (
+      !ui.navigatorText ||
+      !state.pageTextArea ||
+      state.syncingNavigatorText
+    ) {
+      return;
+    }
+    ui.navigatorText.value = state.pageTextArea.value;
+    ui.navigatorText.disabled = state.pageTextArea.disabled;
+    ui.navigatorText.readOnly = state.pageTextArea.readOnly;
+  }
+
+  function onPageTextInput() {
+    syncNavigatorTextFromPage();
+  }
+
+  function setNativeTextAreaValue(textArea, value) {
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    if (setter) setter.call(textArea, value);
+    else textArea.value = value;
+  }
+
+  function onNavigatorTextInput() {
+    const nextValue = ui.navigatorText.value;
+    const textArea = findPageTextArea();
+    bindPageTextArea(textArea);
+    if (!textArea || textArea.disabled || textArea.readOnly) return;
+    state.syncingNavigatorText = true;
+    try {
+      setNativeTextAreaValue(textArea, nextValue);
+      textArea.dispatchEvent(new Event("input", { bubbles: true }));
+    } finally {
+      state.syncingNavigatorText = false;
+    }
+  }
+
+  function toggleNavigatorEditing() {
+    if (!state.navigatorEditing) {
+      bindPageTextArea(findPageTextArea());
+      if (!state.pageTextArea) {
+        setStatus("未找到原网页的正文文本输入框。", "warning");
+        return;
+      }
+      syncNavigatorTextFromPage();
+      state.navigatorEditing = true;
+    } else {
+      state.navigatorEditing = false;
+      ui.navigatorText.blur();
+      state.pageTextArea?.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    renderToolbar();
   }
 
   function applyMinimalPosition(position) {
@@ -530,6 +584,20 @@
       state.settings.characterNavigatorVisible,
     );
     state.root.dataset.collapsed = String(state.collapsed);
+    ui.navigatorFlip.dataset.editing = String(state.navigatorEditing);
+    ui.navigatorFront.setAttribute(
+      "aria-hidden",
+      String(state.navigatorEditing),
+    );
+    ui.navigatorBack.setAttribute(
+      "aria-hidden",
+      String(!state.navigatorEditing),
+    );
+    ui.navigatorEdit.textContent = state.navigatorEditing ? "OK" : "编辑";
+    ui.navigatorEdit.setAttribute(
+      "aria-pressed",
+      String(state.navigatorEditing),
+    );
     ui.collapseButton.textContent = state.collapsed ? "展开" : "收起";
     ui.collapseButton.setAttribute("aria-expanded", String(!state.collapsed));
     ui.title.textContent = minimalMode ? "极简模式 · 双击恢复" : "字框标注助手";
@@ -602,7 +670,6 @@
     return (
       state.settings.drawMode === "single-fixed" &&
       state.available &&
-      state.editable &&
       !state.busy &&
       !state.singlePending
     );
@@ -1486,6 +1553,7 @@
       state.highlightedSurfaceBox = null;
       state.highlightedCharacterIndex = null;
       state.pendingNavigatorLocateIndex = null;
+      state.navigatorEditing = false;
       state.pageKey = nextPageKey;
       state.availabilityKey = "";
       resetGestureForRemount();
@@ -1494,6 +1562,7 @@
 
     const nextSurface = document.querySelector(SURFACE_SELECTOR);
     const nextList = document.querySelector(CHAR_LIST_SELECTOR);
+    bindPageTextArea(findPageTextArea());
     if (nextSurface !== state.surface) {
       if (state.surface) detachSurface(state.surface);
       state.surface = nextSurface;

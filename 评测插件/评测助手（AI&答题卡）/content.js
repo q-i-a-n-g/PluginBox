@@ -530,24 +530,90 @@
   }
 
   let manualShow = false;
+  let availabilityCheckTimer = 0;
 
-  function checkUrl() {
-    const url = window.location.href;
-    const allowed = [
-      "https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/holepage/",
-      "https://mapi.yuanfudao.com/evaluation/#/evaluation/holepage/",
-      "https://mapi.yuanfudao.com/evaluation/#/admin/evaluation/cardPage/",
-      "https://mapi.yuanfudao.com/evaluation/#/evaluation/cardPage/",
-      "https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/#/admin/evaluation/holepage/",
-      "https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/#/evaluation/holepage/",
-      "https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/#/admin/evaluation/cardPage/",
-      "https://metis-match--mapi.online-venv.yuanfudao.com/evaluation/#/evaluation/cardPage/"
-    ];
-    const isAllowed = manualShow || allowed.some(prefix => url.startsWith(prefix));
-    
+  const EVALUATION_TAB_NAMES = new Set([
+    "作答结果",
+    "手写识别",
+    "答案框",
+    "题目框",
+    "分数识别",
+    "固定批改"
+  ]);
+
+  const EVALUATION_OPTION_NAMES = new Set([
+    "一致",
+    "不一致",
+    "半对",
+    "忽略",
+    "未作答",
+    "是",
+    "否",
+    "对",
+    "错",
+    "未批改",
+    "无留痕"
+  ]);
+
+  function isEvaluationField(fieldName) {
+    return (
+      fieldMatches(
+        fieldName,
+        "作答",
+        "识别",
+        "答案框-",
+        "题目框",
+        "老师批改-"
+      ) ||
+      fieldName === "算法可解" ||
+      fieldName === "分数识别" ||
+      fieldName === "分数框识别" ||
+      fieldName === "老师批改"
+    );
+  }
+
+  function hasEvaluationTabStructure() {
+    const tabs = document.querySelectorAll(".ant-tabs-tab, [role='tab']");
+    for (const tab of tabs) {
+      if (!EVALUATION_TAB_NAMES.has(normText(tab.textContent))) continue;
+      if (tab.matches(".ant-tabs-tab") || tab.closest(".ant-tabs, .ant-tabs-nav")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hasEvaluationFormStructure() {
+    const formItems = document.querySelectorAll(".ant-form-item");
+    for (const formItem of formItems) {
+      const fieldName = extractFieldName(formItem);
+      if (!fieldName || !isEvaluationField(fieldName)) continue;
+
+      const optionLabels = formItem.querySelectorAll("label.ant-radio-wrapper");
+      if (optionLabels.length < 2) continue;
+
+      let recognizedOptions = 0;
+      for (const optionLabel of optionLabels) {
+        const input = optionLabel.querySelector('input[type="radio"]');
+        const spans = optionLabel.querySelectorAll(":scope > span");
+        if (!input || !spans.length) continue;
+        const optionName = normText(spans[spans.length - 1].textContent);
+        if (EVALUATION_OPTION_NAMES.has(optionName)) recognizedOptions++;
+      }
+      if (recognizedOptions >= 2) return true;
+    }
+    return false;
+  }
+
+  function isEvaluationPage() {
+    return hasEvaluationTabStructure() && hasEvaluationFormStructure();
+  }
+
+  function checkAvailability() {
+    const isAllowed = manualShow || isEvaluationPage();
     const trigger = document.getElementById("eval-helper-trigger");
     const panel = document.getElementById("eval-helper-panel");
-    
+
     if (isAllowed) {
       if (!trigger) {
         createUI();
@@ -560,19 +626,30 @@
     }
   }
 
+  function scheduleAvailabilityCheck() {
+    clearTimeout(availabilityCheckTimer);
+    availabilityCheckTimer = window.setTimeout(checkAvailability, 120);
+  }
+
   async function init() {
     await loadConfig();
-    checkUrl();
-    // Watch for hash changes in SPA
-    window.addEventListener("hashchange", checkUrl);
-    // Periodically check as some navigations might not trigger hashchange if they replace state
-    setInterval(checkUrl, 2000);
+    checkAvailability();
+
+    const observer = new MutationObserver(scheduleAvailabilityCheck);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+
+    // Fallback for SPA updates that reuse nodes without producing useful mutations.
+    setInterval(checkAvailability, 2000);
 
     // Manual trigger listener
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.type === "TOGGLE_EVAL_HELPER") {
         manualShow = !manualShow;
-        checkUrl();
+        checkAvailability();
         if (manualShow) {
           showToast("手动模式：评测按钮已呼出");
         }

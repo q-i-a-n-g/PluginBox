@@ -105,16 +105,15 @@ test("extension action can inject and toggle the helper", () => {
 test("native pause is the default and compact mode toggle is used", () => {
   const source = fs.readFileSync(path.join(extensionRoot, "content.js"), "utf8");
   assert.match(source, /drawMode: "native"/);
+  assert.match(source, /window\[VISIBILITY_REQUEST_KEY\] === true/);
   assert.match(source, /SETTINGS_SCHEMA_VERSION = 2/);
   assert.match(source, /data-action="toggle-mode"/);
   assert.doesNotMatch(source, /data-mode="single-fixed"/);
   assert.doesNotMatch(source, /data-mode="native"/);
   assert.doesNotMatch(source, /data-mode="two-point"/);
   assert.doesNotMatch(source, /state\.twoPoint/);
-  assert.match(
-    source,
-    /previousMode === "native" && mode === "single-fixed"/,
-  );
+  assert.match(source, /已切换到单击画框；请选择要标注的文字/);
+  assert.doesNotMatch(source, /advanceWhenResumingSingleMode/);
 });
 
 test("batch delete removes five boxes starting at the current character", () => {
@@ -174,6 +173,10 @@ test("floating character navigator locates and highlights the image box", () => 
   assert.match(source, /CHARACTER_NAVIGATOR_SCHEMA_VERSION = 1/);
   assert.match(source, /data-action="toggle-navigator"/);
   assert.match(source, /data-action="close-navigator"/);
+  assert.match(source, /data-action="edit-navigator"/);
+  assert.match(source, /data-role="navigator-text"/);
+  assert.match(source, /setNativeTextAreaValue/);
+  assert.match(source, /dispatchEvent\(new Event\("input"/);
   assert.match(source, /setCharacterNavigatorVisible/);
   assert.match(source, /双击某个字，自动定位，高亮展示/);
   assert.match(source, /"info",\s*4500/);
@@ -190,6 +193,9 @@ test("floating character navigator locates and highlights the image box", () => 
   assert.match(source, /左侧图片中该字暂无字框/);
   assert.match(source, /ocr-box-helper__surface-highlight/);
   assert.match(styles, /\.ocr-box-helper__character-navigator/);
+  assert.match(styles, /\.ocr-box-helper__navigator-flip\[data-editing="true"\]/);
+  assert.match(styles, /rotateY\(-180deg\)/);
+  assert.match(styles, /\.ocr-box-helper__navigator-text/);
   assert.match(styles, /data-navigator-visible="false"/);
   assert.match(
     styles,

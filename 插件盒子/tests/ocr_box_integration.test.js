@@ -34,7 +34,7 @@ test("字框标注使用单独插件的功能标识并保留盒子样式", () =>
     "utf8",
   );
   assert.equal(source, standaloneSource);
-  assert.match(source, /window\[VISIBILITY_REQUEST_KEY\] !== false/);
+  assert.match(source, /window\[VISIBILITY_REQUEST_KEY\] === true/);
   assert.match(source, /ROOT_ID = "ocr-box-helper-root"/);
   assert.match(source, /TOAST_ID = "ocr-box-helper-clear-toast"/);
   assert.match(styles, /#ocr-box-helper-root\[data-interface-visible="false"\]/);
@@ -54,7 +54,8 @@ test("盒子入口可切换字框标注并保存显示状态", () => {
   assert.match(popup, /#2563eb 0%, #facc15 50%, #06b6d4 100%/);
   assert.match(background, /TOOLBOX_SET_OCR_VISIBILITY/);
   assert.match(background, /chrome\.scripting\.executeScript/);
-  assert.match(background, /OCR_SAMPLE_PATH_PREFIX/);
+  assert.match(background, /hasOcrPageContent/);
+  assert.doesNotMatch(background, /OCR_SAMPLE_PATH_PREFIX/);
 });
 
 test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
@@ -71,6 +72,7 @@ test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
     'data-action="delete-five"',
     'data-action="clear-punctuation"',
     'data-action="clear-all"',
+    'data-action="edit-navigator"',
   ]) {
     assert.match(source, new RegExp(marker));
   }
@@ -78,6 +80,7 @@ test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
   assert.doesNotMatch(source, /data-mode="single-fixed"/);
   assert.doesNotMatch(source, /data-mode="native"/);
   assert.match(source, /SINGLE_MODE_IDLE_MS = 5000/);
+  assert.match(source, /5 秒内未进行单击画框/);
   assert.match(source, /core\.findNextContentIndex/);
   assert.match(source, /core\.findPreviousContentIndex/);
   assert.match(source, /core\.isCommonPunctuation/);
@@ -86,6 +89,10 @@ test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
   assert.match(source, /data-action="close-navigator"/);
   assert.match(source, /双击某个字，自动定位，高亮展示/);
   assert.match(source, /aria-label="增强逐字选择"/);
+  assert.match(source, /data-role="navigator-text"/);
+  assert.match(source, /setNativeTextAreaValue/);
+  assert.match(source, /dispatchEvent\(new Event\("input"/);
+  assert.doesNotMatch(source, /advanceWhenResumingSingleMode/);
   assert.match(source, /getBoxElement/);
   assert.match(source, /centerCharacterInSurface/);
   assert.match(
@@ -98,6 +105,9 @@ test("盒子版保留完整字框功能并使用新版紧凑控制", () => {
   assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles, /#ocr-box-helper-root\[data-minimal="true"\]/);
   assert.match(styles, /\.ocr-box-helper__character-navigator/);
+  assert.match(styles, /\.ocr-box-helper__navigator-flip\[data-editing="true"\]/);
+  assert.match(styles, /rotateY\(-180deg\)/);
+  assert.match(styles, /\.ocr-box-helper__navigator-text/);
   assert.match(
     styles,
     /\.ocr-box-helper__character\[data-framed="true"\][\s\S]*background: #1f2937/,

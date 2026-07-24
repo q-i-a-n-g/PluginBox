@@ -13,14 +13,45 @@ document.querySelectorAll("[data-tool]").forEach((button) => {
 async function updateToolAvailability() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    for (const tool of ["images", "eval"]) {
+    for (const tool of ["images", "eval", "ocr"]) {
       const button = document.querySelector(`[data-tool="${tool}"]`);
-      const supported = siteRules.isToolSupported(tool, tab?.url || "");
+      const supported = await isToolSupportedOnTab(tab, tool);
       button.disabled = !supported;
       button.title = supported ? "" : siteRules.unavailableMessage(tool);
     }
   } catch (_error) {
     // Click handling still enforces the same site rules.
+  }
+}
+
+async function getToolSupport(tabId, tool) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, {
+      type: "TOOLBOX_GET_SUPPORT",
+      tool
+    });
+  } catch (_error) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["tool_site_rules.js", "content.js"]
+    });
+    return chrome.tabs.sendMessage(tabId, {
+      type: "TOOLBOX_GET_SUPPORT",
+      tool
+    });
+  }
+}
+
+async function isToolSupportedOnTab(tab, tool) {
+  if (!tab?.id) return false;
+  if (tool === "images") {
+    return siteRules.isSequenceDownloadPage(tab.url || "");
+  }
+  try {
+    const response = await getToolSupport(tab.id, tool);
+    return Boolean(response?.supported);
+  } catch (_error) {
+    return false;
   }
 }
 
@@ -43,7 +74,7 @@ async function openTool(tool) {
     return;
   }
 
-  if (!siteRules.isToolSupported(tool, tab.url || "")) {
+  if (!(await isToolSupportedOnTab(tab, tool))) {
     showError(siteRules.unavailableMessage(tool));
     return;
   }

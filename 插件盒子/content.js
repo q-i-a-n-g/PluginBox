@@ -7,7 +7,7 @@
   const ROOT_ID = "__plugin_toolbox_root";
   const STORAGE_KEY = "plugin_toolbox_eval_config_v1";
   const UI_STATE_KEY = "plugin_toolbox_ui_state_v1";
-  const UI_STATE_SCHEMA_VERSION = 2;
+  const UI_STATE_SCHEMA_VERSION = 3;
   const OCR_VISIBILITY_MESSAGE = "TOOLBOX_SET_OCR_VISIBILITY";
   const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)(?:[?#].*)?$/i;
   const siteRules = globalThis.PluginToolboxSiteRules;
@@ -48,6 +48,7 @@
   let evalPanel;
   let lastRouteSignature = "";
   let routeSyncing = false;
+  let contentSyncTimer = 0;
   let currentConfig = { ...DEFAULT_CONFIG };
   let uiState = structuredClone(DEFAULT_UI_STATE);
 
@@ -72,6 +73,15 @@
         }
       })();
       return true;
+    }
+
+    if (message?.type === "TOOLBOX_GET_SUPPORT") {
+      sendResponse({
+        ok: true,
+        supported: isToolSupportedOnPage(message.tool),
+        error: siteRules.unavailableMessage(message.tool)
+      });
+      return false;
     }
 
     return false;
@@ -614,13 +624,17 @@
 
   function updateToolAvailability() {
     if (!panel) return;
-    for (const name of ["images", "eval"]) {
+    for (const name of ["images", "eval", "ocr"]) {
       const button = panel.querySelector(`[data-ptb-tool="${name}"]`);
       if (!button) continue;
-      const supported = siteRules.isToolSupported(name, location.href);
+      const supported = isToolSupportedOnPage(name);
       button.disabled = !supported;
       button.title = supported ? "" : siteRules.unavailableMessage(name);
     }
+  }
+
+  function isToolSupportedOnPage(name) {
+    return siteRules.isToolSupported(name, location.href, document);
   }
 
   function bindFloatingEvents() {
@@ -873,7 +887,7 @@
             ? storedTools.eval
             : DEFAULT_UI_STATE.tools.eval,
         ocr:
-          typeof storedTools.ocr === "boolean"
+          currentSchema && typeof storedTools.ocr === "boolean"
             ? storedTools.ocr
             : DEFAULT_UI_STATE.tools.ocr
       }
@@ -886,7 +900,7 @@
   }
 
   async function setToolVisible(name, visible) {
-    if (visible && !siteRules.isToolSupported(name, location.href)) {
+    if (visible && !isToolSupportedOnPage(name)) {
       throw new Error(siteRules.unavailableMessage(name));
     }
     const previous = uiState.tools[name];
@@ -905,13 +919,15 @@
     const showImages =
       uiState.tools.images && siteRules.isSequenceDownloadPage(location.href);
     const showEval =
-      uiState.tools.eval && siteRules.isEvaluationPage(location.href);
+      uiState.tools.eval && siteRules.isEvaluationPage(document);
+    const showOcr =
+      uiState.tools.ocr && siteRules.isOcrPage(document);
     pageButton.classList.toggle("ptb-float-hidden", !showImages);
     evalButton.classList.toggle("ptb-float-hidden", !showEval);
     if (!showEval) {
       evalPanel.classList.add("ptb-float-hidden");
     }
-    const response = await setOcrVisibility(uiState.tools.ocr);
+    const response = await setOcrVisibility(showOcr);
     if (options.strictOcr && !response?.ok) {
       throw new Error(response?.error || "当前页面不支持字框标注。");
     }
@@ -932,8 +948,8 @@
     await loadUiState();
     if (
       siteRules.isSequenceDownloadPage(location.href) ||
-      siteRules.isEvaluationPage(location.href) ||
-      uiState.tools.ocr
+      siteRules.isEvaluationPage(document) ||
+      (uiState.tools.ocr && siteRules.isOcrPage(document))
     ) {
       await ensureUI();
       root.classList.add("ptb-hidden");
@@ -943,7 +959,11 @@
 
   async function syncRouteToolVisibility() {
     if (routeSyncing) return;
-    const routeSignature = `${siteRules.isSequenceDownloadPage(location.href)}:${siteRules.isEvaluationPage(location.href)}`;
+    const routeSignature = [
+      siteRules.isSequenceDownloadPage(location.href),
+      siteRules.isEvaluationPage(document),
+      siteRules.isOcrPage(document)
+    ].join(":");
     if (routeSignature === lastRouteSignature) return;
     routeSyncing = true;
     lastRouteSignature = routeSignature;
@@ -951,7 +971,8 @@
       if (
         !root &&
         (siteRules.isSequenceDownloadPage(location.href) ||
-          siteRules.isEvaluationPage(location.href))
+          siteRules.isEvaluationPage(document) ||
+          (uiState.tools.ocr && siteRules.isOcrPage(document)))
       ) {
         await ensureUI();
       }
@@ -967,7 +988,17 @@
   async function initializeAutomaticTools() {
     await restorePersistedTools();
     await syncRouteToolVisibility();
-    if (!siteRules.isRelevantHost(location.href)) return;
+    const observer = new MutationObserver(() => {
+      window.clearTimeout(contentSyncTimer);
+      contentSyncTimer = window.setTimeout(
+        () => void syncRouteToolVisibility(),
+        120
+      );
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
     window.addEventListener("hashchange", () => void syncRouteToolVisibility());
     window.addEventListener("popstate", () => void syncRouteToolVisibility());
     window.setInterval(() => void syncRouteToolVisibility(), 1500);

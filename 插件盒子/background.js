@@ -1,6 +1,4 @@
 let isDownloading = false;
-const OCR_SAMPLE_ORIGIN = "https://metis-aione-test.zhenguanyu.com";
-const OCR_SAMPLE_PATH_PREFIX = "/metis-aione-eval/samples/";
 const OCR_VISIBILITY_MESSAGE = "ocr-box-helper-visibility";
 
 chrome.action.onClicked.addListener((tab) => {
@@ -63,24 +61,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-function isSupportedOcrPage(url) {
-  try {
-    const parsed = new URL(url);
-    return (
-      parsed.origin === OCR_SAMPLE_ORIGIN &&
-      parsed.pathname.startsWith(OCR_SAMPLE_PATH_PREFIX)
-    );
-  } catch (_error) {
-    return false;
-  }
-}
-
 function sendOcrVisibilityMessage(tabId, action, visible) {
   return chrome.tabs.sendMessage(tabId, {
     type: OCR_VISIBILITY_MESSAGE,
     action,
     ...(typeof visible === "boolean" ? { visible } : {})
   });
+}
+
+async function hasOcrPageContent(tabId) {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () =>
+      Boolean(
+        document.querySelector(
+          '[role="img"][aria-label="作文正文逐字标注图片"]'
+        ) &&
+          document.querySelector('[aria-label="逐字选择列表"]') &&
+          document.querySelector('textarea[aria-label="正文文本"]')
+      )
+  });
+  return Boolean(result?.result);
 }
 
 async function injectOcrTool(tabId) {
@@ -99,10 +100,10 @@ async function injectOcrTool(tabId) {
 }
 
 async function setOcrToolVisibility(tab, visible) {
-  if (!tab?.id || !isSupportedOcrPage(tab.url)) {
+  if (!tab?.id) {
     return {
       ok: false,
-      error: "字框标注仅支持算法评测系统的作文正文单字框样本页。"
+      error: "未找到当前网页。"
     };
   }
 
@@ -111,6 +112,17 @@ async function setOcrToolVisibility(tab, visible) {
     current = await sendOcrVisibilityMessage(tab.id, "get");
   } catch (_error) {
     current = null;
+  }
+
+  if (!visible && !current?.ready) {
+    return { ok: true, visible: false };
+  }
+
+  if (visible && !(await hasOcrPageContent(tab.id))) {
+    return {
+      ok: false,
+      error: "当前网页未识别到作文正文单字框标注内容。"
+    };
   }
 
   if (!current || typeof current.visible !== "boolean") {

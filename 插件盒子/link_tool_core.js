@@ -7,7 +7,7 @@
 
   const IMAGE_EXT_RE =
     /\.(jpg|jpeg|png|webp|gif|bmp|heic|heif)(?:[?#].*)?$/i;
-  const URL_CANDIDATE_RE = /https?:\/\/[^\s"'<>，。；、)\]}]+/gi;
+  const URL_CANDIDATE_RE = /https?:\/\/[^\s"'<>，,。；、)\]}]+/gi;
 
   function parseDirectImageLinks(text) {
     const seen = new Set();
