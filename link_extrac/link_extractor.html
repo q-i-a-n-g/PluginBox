@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>链接预览下载</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -177,11 +176,6 @@
         .btn-download {
             background: linear-gradient(135deg, var(--blue), #2563eb);
             color: #fff;
-        }
-
-        .btn-export {
-            background: linear-gradient(135deg, var(--amber), #d97706);
-            color: #111827;
         }
 
         .btn-clear,
@@ -417,8 +411,7 @@
             <textarea id="inputText" placeholder="粘贴 JSON 或多行图片链接...&#10;https://metis-online.fbcontent.cn/.../4nMWZXhTevpDNcqBUTi5eZ.jpg"></textarea>
             <div class="btn-group">
                 <button class="btn btn-primary" id="extractBtn" type="button">OK</button>
-                <button class="btn btn-download" id="downloadBtn" type="button" disabled>下载</button>
-                <button class="btn btn-export" id="exportBtn" type="button" disabled>导出 Excel</button>
+                <button class="btn btn-download" id="downloadBtn" type="button">下载</button>
                 <button class="btn btn-clear" id="clearBtn" type="button">清空</button>
             </div>
             <div class="status-bar" id="statusBar"></div>
@@ -464,11 +457,9 @@
         const jumpInput = document.getElementById("jumpInput");
         const jumpBtn = document.getElementById("jumpBtn");
         const downloadBtn = document.getElementById("downloadBtn");
-        const exportBtn = document.getElementById("exportBtn");
 
         document.getElementById("extractBtn").addEventListener("click", extractLinks);
         document.getElementById("downloadBtn").addEventListener("click", downloadAll);
-        document.getElementById("exportBtn").addEventListener("click", exportExcel);
         document.getElementById("clearBtn").addEventListener("click", clearAll);
         prevBtn.addEventListener("click", () => goPage(currentPage - 1));
         nextBtn.addEventListener("click", () => goPage(currentPage + 1));
@@ -510,7 +501,7 @@
 
         function parseImageLinks(text) {
             const raw = normalizeRawText(text);
-            const matches = raw.match(/https?:\/\/[^\s"'<>，。；、)\]}]+/g) || [];
+            const matches = raw.match(/https?:\/\/[^\s"'<>，,。；、)\]}]+/g) || [];
             const links = [];
             const seen = new Set();
 
@@ -550,8 +541,6 @@
             }
 
             resultSection.classList.add("show");
-            downloadBtn.disabled = false;
-            exportBtn.disabled = false;
             renderPage();
             showStatus(`已提取 ${extractedLinks.length} 条图片链接。`, "success");
         }
@@ -559,8 +548,6 @@
         function resetResults() {
             imageList.innerHTML = "";
             resultSection.classList.remove("show");
-            downloadBtn.disabled = true;
-            exportBtn.disabled = true;
             extractedLinks = [];
             currentPage = 1;
             preloadCache.clear();
@@ -671,17 +658,19 @@
         }
 
         async function downloadAll() {
-            if (extractedLinks.length === 0) {
+            inputText.value = trimTrailingBlankLines(inputText.value);
+            updateCounter();
+            const downloadLinks = parseImageLinks(inputText.value);
+            if (downloadLinks.length === 0) {
                 showStatus("没有可下载的图片链接。", "error");
                 return;
             }
 
             downloadBtn.disabled = true;
-            exportBtn.disabled = true;
-            showStatus(`开始下载 ${extractedLinks.length} 张图片...`, "info");
+            showStatus(`开始下载 ${downloadLinks.length} 张图片...`, "info");
 
             try {
-                const result = await downloadWithBlobQueue(extractedLinks);
+                const result = await downloadWithBlobQueue(downloadLinks);
                 if (result.failed.length > 0) {
                     showStatus(
                         `已下载 ${result.saved} 张，失败 ${result.failed.length} 张。失败多为跨域限制，可用“插件盒子”下载。`,
@@ -692,7 +681,6 @@
                 }
             } finally {
                 downloadBtn.disabled = false;
-                exportBtn.disabled = false;
             }
         }
 
@@ -788,42 +776,6 @@
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-        }
-
-        function exportExcel() {
-            if (extractedLinks.length === 0) {
-                showStatus("没有可导出的链接。", "error");
-                return;
-            }
-
-            if (!window.XLSX) {
-                showStatus("Excel 库未加载，请检查网络后重试。", "error");
-                return;
-            }
-
-            const data = [["序号", "链接地址", "文件名"]];
-            extractedLinks.forEach((link, index) => {
-                data.push([index + 1, link, extractFileName(link)]);
-            });
-
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            ws["!cols"] = [{ wch: 8 }, { wch: 110 }, { wch: 34 }];
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "图片链接");
-
-            const now = new Date();
-            const timestamp = [
-                now.getFullYear(),
-                String(now.getMonth() + 1).padStart(2, "0"),
-                String(now.getDate()).padStart(2, "0")
-            ].join("") + "_" + [
-                String(now.getHours()).padStart(2, "0"),
-                String(now.getMinutes()).padStart(2, "0"),
-                String(now.getSeconds()).padStart(2, "0")
-            ].join("");
-
-            XLSX.writeFile(wb, `图片链接_${timestamp}.xlsx`);
-            showStatus(`已导出 ${extractedLinks.length} 条链接。`, "success");
         }
 
         function clearAll() {

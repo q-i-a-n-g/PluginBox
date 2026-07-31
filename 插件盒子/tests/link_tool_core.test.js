@@ -106,3 +106,36 @@ test("link preview loads the parser before its page controller", () => {
     ),
   );
 });
+
+test("preview and download are independent and Excel export is removed", () => {
+  const html = fs.readFileSync(
+    path.join(extensionRoot, "link_tool.html"),
+    "utf8",
+  );
+  const controller = fs.readFileSync(
+    path.join(extensionRoot, "link_tool.js"),
+    "utf8",
+  );
+  const standalone = fs.readFileSync(
+    path.resolve(extensionRoot, "..", "link_extrac", "link_extractor.html"),
+    "utf8",
+  );
+
+  assert.match(html, /id="downloadBtn" type="button">下载<\/button>/);
+  assert.match(controller, /const downloadLinks = parseDirectImageLinks\(input\.value\)/);
+  assert.match(controller, /items: downloadLinks\.map/);
+  assert.doesNotMatch(html, /导出 Excel|exportBtn|class="export"/i);
+  assert.doesNotMatch(controller, /exportExcel|exportBtn|application\/vnd\.ms-excel/i);
+
+  assert.match(standalone, /id="downloadBtn" type="button">下载<\/button>/);
+  assert.match(standalone, /const downloadLinks = parseImageLinks\(inputText\.value\)/);
+  assert.match(standalone, /downloadWithBlobQueue\(downloadLinks\)/);
+  assert.doesNotMatch(standalone, /导出 Excel|exportExcel|exportBtn|XLSX|xlsx\.full/i);
+
+  const inlineScripts = Array.from(
+    standalone.matchAll(/<script>([\s\S]*?)<\/script>/g),
+    (match) => match[1],
+  );
+  assert.equal(inlineScripts.length, 1);
+  assert.doesNotThrow(() => new Function(inlineScripts[0]));
+});

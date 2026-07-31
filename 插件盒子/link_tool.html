@@ -67,7 +67,6 @@
     button:disabled { opacity: .45; cursor: not-allowed; }
     .primary { background: linear-gradient(135deg, var(--green), #16a34a); }
     .download { background: linear-gradient(135deg, var(--blue), #2563eb); }
-    .export { background: linear-gradient(135deg, var(--amber), #d97706); color: #111827; }
     .status {
       display: none;
       margin-top: 14px;
@@ -161,8 +160,7 @@
       <textarea id="inputText" placeholder="粘贴链接到这里..."></textarea>
       <div class="actions">
         <button class="primary" id="previewBtn" type="button">预览</button>
-        <button class="download" id="downloadBtn" type="button" disabled>下载</button>
-        <button class="export" id="exportBtn" type="button" disabled>导出 Excel</button>
+        <button class="download" id="downloadBtn" type="button">下载</button>
         <button id="clearBtn" type="button">清空</button>
       </div>
       <div class="status" id="status"></div>
