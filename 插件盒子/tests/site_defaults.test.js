@@ -117,9 +117,19 @@ test("网页脚本和弹窗共享内容规则并默认启用顺序下载与评�
   assert.match(content, /siteRules\.isEvaluationPage\(document\)/);
   assert.match(content, /siteRules\.isOcrPage\(document\)/);
   assert.match(content, /TOOLBOX_GET_SUPPORT/);
+  assert.match(content, /Object\.fromEntries/);
   assert.match(content, /window\.setInterval\(\(\) => void syncRouteToolVisibility\(\), 1500\)/);
   assert.match(popup, /isToolSupportedOnTab\(tab, tool\)/);
   assert.match(popup, /TOOLBOX_GET_SUPPORT/);
+  assert.match(popup, /CONTENT_DETECTED_TOOLS = \["eval", "ocr"\]/);
+  assert.match(popup, /getLoadedToolSupport/);
+  assert.match(popup, /requestAnimationFrame\(\(\) => void updateToolAvailability\(\)\)/);
+  const popupStartup = popup.slice(
+    popup.indexOf("async function updateToolAvailability"),
+    popup.indexOf("async function getToolSupport"),
+  );
+  assert.doesNotMatch(popupStartup, /chrome\.scripting\.executeScript/);
+  assert.doesNotMatch(popupStartup, /isToolSupportedOnTab/);
   assert.ok(
     popupHtml.indexOf('src="tool_site_rules.js"') <
       popupHtml.indexOf('src="popup.js"'),

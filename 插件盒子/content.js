@@ -76,10 +76,24 @@
     }
 
     if (message?.type === "TOOLBOX_GET_SUPPORT") {
+      const requestedTools = Array.isArray(message.tools)
+        ? message.tools
+        : [message.tool];
+      const tools = requestedTools.filter((tool) =>
+        ["images", "eval", "ocr"].includes(tool)
+      );
+      const support = Object.fromEntries(
+        tools.map((tool) => [tool, isToolSupportedOnPage(tool)])
+      );
       sendResponse({
         ok: true,
-        supported: isToolSupportedOnPage(message.tool),
-        error: siteRules.unavailableMessage(message.tool)
+        support,
+        ...(typeof message.tool === "string"
+          ? {
+              supported: Boolean(support[message.tool]),
+              error: siteRules.unavailableMessage(message.tool)
+            }
+          : {})
       });
       return false;
     }

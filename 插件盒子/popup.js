@@ -1,5 +1,6 @@
 const statusEl = document.getElementById("status");
 const siteRules = globalThis.PluginToolboxSiteRules;
+const CONTENT_DETECTED_TOOLS = ["eval", "ocr"];
 
 document.querySelector("[data-help]").addEventListener("click", async () => {
   await chrome.tabs.create({ url: chrome.runtime.getURL("README.pdf") });
@@ -13,14 +14,42 @@ document.querySelectorAll("[data-tool]").forEach((button) => {
 async function updateToolAvailability() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    for (const tool of ["images", "eval", "ocr"]) {
-      const button = document.querySelector(`[data-tool="${tool}"]`);
-      const supported = await isToolSupportedOnTab(tab, tool);
-      button.disabled = !supported;
-      button.title = supported ? "" : siteRules.unavailableMessage(tool);
+    if (!tab?.id) return;
+
+    updateButtonAvailability(
+      "images",
+      siteRules.isSequenceDownloadPage(tab.url || "")
+    );
+
+    const response = await getLoadedToolSupport(
+      tab.id,
+      CONTENT_DETECTED_TOOLS
+    );
+    if (!response?.support) return;
+    for (const tool of CONTENT_DETECTED_TOOLS) {
+      if (typeof response.support[tool] !== "boolean") continue;
+      updateButtonAvailability(tool, response.support[tool]);
     }
   } catch (_error) {
     // Click handling still enforces the same site rules.
+  }
+}
+
+function updateButtonAvailability(tool, supported) {
+  const button = document.querySelector(`[data-tool="${tool}"]`);
+  if (!button) return;
+  button.disabled = !supported;
+  button.title = supported ? "" : siteRules.unavailableMessage(tool);
+}
+
+async function getLoadedToolSupport(tabId, tools) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, {
+      type: "TOOLBOX_GET_SUPPORT",
+      tools
+    });
+  } catch (_error) {
+    return null;
   }
 }
 
@@ -103,4 +132,4 @@ function showError(message) {
   statusEl.className = "status show";
 }
 
-void updateToolAvailability();
+requestAnimationFrame(() => void updateToolAvailability());
